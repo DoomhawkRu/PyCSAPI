@@ -151,12 +151,13 @@ class Entity:
         return name
     
     def get_position(self, bone_id = constant.HITBOX_ID_HEAD, player = False):
+        x, y, z = 0.0, 0.0, 0.0
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_alive():
-            return (0.0, 0.0, 0.0)
+            return (x, y, z)
         if player:
             x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'], 'f')
-            y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + 0x4, 'f')
-            z = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + 0x8, 'f') + win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecViewOffset'] + 0x8, 'f')
+            y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE, 'f')
+            z = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE * 2, 'f') + win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecViewOffset'] + constant.TYPE_FLOAT_SIZE * 2, 'f')
         else:
             entity_bones = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_dwBoneMatrix'], 'i')
             x = win32util.read_memory(self.game, entity_bones + constant.BONE_MATRIX_SIZE * bone_id + 0x0C, 'f')
@@ -165,10 +166,11 @@ class Entity:
         return (x, y, z)
     
     def get_punch(self):
+        x, y = 0.0, 0.0
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_alive():
-            return (0.0, 0.0)
+            return (x, y)
         x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_aimPunchAngle'], 'f')
-        y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_aimPunchAngle'] + 0x4, 'f')
+        y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_aimPunchAngle'] + constant.TYPE_FLOAT_SIZE, 'f')
         return (x, y)
     
     def get_shots_fired(self):
@@ -184,10 +186,11 @@ class Entity:
             return 0
     
     def get_view_angle(self):
+        x, y = 0.0, 0.0
         if not self.player.is_in_game() or not self.player.get_team_id():
-            return (0.0, 0.0, 0.0)
+            return (x, y)
         x = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'], 'f')
-        y = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + 0x4, 'f')
+        y = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + constant.TYPE_FLOAT_SIZE, 'f')
         return (x, y)
     
     def get_weapon(self):
@@ -203,39 +206,41 @@ class Entity:
     def is_bspotted(self):
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_player() or not self.is_alive():
             return False
-        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], 'b') == 1
+        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], 'b') == constant.STATE_SPOTTED
     
     def is_dormant(self):
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_player() or not self.is_alive():
             return False
-        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bGunGameImmunity'], 'b') == 1
+        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bGunGameImmunity'], 'b') == constant.STATE_DORMANT
     
     def is_player(self):
-        return self.player.is_in_game() and bool(self.get_health()) and (self.get_team_id() == 2 or self.get_team_id() == 3)
+        return self.player.is_in_game() and bool(self.get_health()) and (self.get_team_id() == constant.TEAM_ID_T or self.get_team_id() == constant.TEAM_ID_CT)
     
     def is_scoped(self):
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_player() or not self.is_alive():
             return False
-        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bIsScoped'], 'b') == 1
+        return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bIsScoped'], 'b') == constant.STATE_SCOPED
     
     def set_bspotted(self, status = True):
         if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_player() or not self.is_alive():
             return False
-        win32util.write_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], 1 if status else 0, 'b')
+        win32util.write_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], constant.STATE_SPOTTED if status else constant.STATE_NOT_SPOTTED, 'b')
 
     def set_glow(self, color = (255, 255, 255)):
         if not self.player.is_in_game() or not self.player.is_alive() or not self.player.get_team_id():
             return
+        if not len(color) == 3:
+            color = (255, 255, 255)
         r, g, b = color[0] / 255, color[1] / 255, color[2] / 255
         if r > 1 or r < 0: r = 1.0
         if g > 1 or g < 0: g = 1.0
         if b > 1 or b < 0: b = 1.0
         entity_glow_index = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_iGlowIndex'], 'i')
         glow_pointer = win32util.read_memory(self.game, self.client + self.offset['signatures']['dwGlowObjectManager'], 'i')
-        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x4, r, 'f')
-        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x8, g, 'f')
-        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0xc, b, 'f')
-        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x10, 1.0, 'f')
+        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + constant.TYPE_FLOAT_SIZE, r, 'f')
+        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + constant.TYPE_FLOAT_SIZE * 2, g, 'f')
+        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + constant.TYPE_FLOAT_SIZE * 3, b, 'f')
+        win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + constant.TYPE_FLOAT_SIZE * 4, 1.0, 'f')
         win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x24, 1, 'i')
         win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x25, 0, 'i')
 
@@ -280,8 +285,8 @@ class Player:
     def get_name(self):
         return self.get_entity().get_name()
     
-    def get_position(self, bone_id = constant.HITBOX_ID_HEAD):
-        return self.get_entity().get_position(bone_id, True)
+    def get_position(self):
+        return self.get_entity().get_position(None, True)
     
     def get_punch(self):
         return self.get_entity().get_punch()
@@ -305,7 +310,7 @@ class Player:
         return self.get_entity().is_dormant()
     
     def is_in_game(self):
-        return win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_State'], 'i') == 6
+        return win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_State'], 'i') == constant.STATE_IN_GAME_CONNECTED
     
     def is_on_ground(self):
         return self.is_in_game() and  bool(self.is_alive()) and self.get_team_id() > 1 and bool(self._get_flags() & (1 << 0))
@@ -328,7 +333,7 @@ class Player:
     def set_backward(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
             return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceBackward'], 1 if status else 0, 'i')
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceBackward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
     
     def set_flash_alpha(self, value):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
@@ -338,30 +343,31 @@ class Player:
     def set_forward(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
             return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceForward'], 1 if status else 0, 'i')
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceForward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
     
     def set_jump(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
             return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceJump'], 6 if status else 5, 'i')
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceJump'], constant.STATE_JUMPING_ENABLE if status else constant.STATE_JUMPING_DISABLE, 'i')
     
     def set_left(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
             return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceLeft'], 1 if status else 0, 'i')
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceLeft'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
     
     def set_right(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
             return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], 1 if status else 0, 'i')
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
     
     def set_shoot(self, status = True):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
-            return
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceAttack'], 6 if status else 4, 'i')
+            return False
+        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceAttack'], constant.STATE_SHOOTING_ENABLE if status else constant.STATE_SHOOTING_DISABLE, 'i')
     
     def set_view_angle(self, x, y):
         if not self.is_in_game() or not self.get_team_id() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'], x, 'f')
-        win32util.write_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + 0x4, y, 'f')
+        win32util.write_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + constant.TYPE_FLOAT_SIZE, y, 'f')
+        return True

@@ -3,7 +3,7 @@
 ## How to install:
 ### Installing from PyPi repository:
 1. Download and install Python 3.6.6 from the [official site](https://www.python.org) ([x86-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6.exe), [x64-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6-amd64.exe))
-2. Type following command in the Windows console:
+2. Type the following command in the Windows console:
 ```
 pip3 install pycsapi
 ```
@@ -11,7 +11,7 @@ pip3 install pycsapi
 ### Installing manually from the source code:
 1. Download and install Python 3.6.6 from the [official site](https://www.python.org) ([x86-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6.exe), [x64-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6-amd64.exe))
 2. Download and install Git from the [official site](https://git-scm.com/) ([x86/x64-installer](https://git-scm.com/download/win))
-3. Type following commands in the Git Bash console:
+3. Type the following commands in the Git Bash console:
 ```
 git clone https://github.com/DoomhawkRu/PyCSAPI.git
 cd PyCSAPI
@@ -40,8 +40,6 @@ if __name__ == '__main__':
 
 ### GlowESP:
 ```python
-from pycsapi import constant
-from pycsapi import util
 import pycsapi
 import time
 
@@ -60,6 +58,7 @@ if __name__ == '__main__':
                     entity.set_glow((r, g, b))
         time.sleep(.01)
 ```
+![GlowESP](https://raw.githubusercontent.com/DoomhawkRu/PyCSAPI/master/image/glowesp.png)
 
 More examples coming soon
 

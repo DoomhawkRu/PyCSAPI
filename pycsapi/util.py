@@ -10,11 +10,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 from ctypes import *
 import math
-import random
+import tkinter
+import win32api
+import win32con
+import win32gui
+
 import threading
 import time
-import win32api
-import win32gui
+
 try:
     from pycsapi import structures
 except:
@@ -42,13 +45,24 @@ def check_angles(pitch, yaw):
         return False
     return True
 
-def get_window_data(windows):
-    rect = win32gui.GetWindowRect(windows)
-    x = rect[0]
-    y = rect[1]
-    w = rect[2] - x
-    h = rect[3] - y
-    return (x, y, w, h)
+def get_window(title):
+    x1, y1, x2, y2 = win32gui.GetWindowRect(win32gui.FindWindow(None, title))
+    w, h, x, y = win32gui.GetClientRect(win32gui.FindWindow(None, title))
+    client = (x, y)
+    window = ((x1, y1), (x2, y2))
+    if window[1] == client:
+        return window
+    else:
+        SM_CXSIZEFRAME = win32api.GetSystemMetrics(win32con.SM_CXSIZEFRAME)
+        SM_CYBORDER = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
+        SM_CYCAPTION = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
+        diffx = SM_CYBORDER
+        diffy = SM_CYCAPTION
+        return ((window[0][0] + diffx, window[0][1] + diffy), (window[1][0], window[1][1]))
+
+def get_client_size(title):
+    window_data = get_window(title)
+    return (window_data[1][0] - window_data[0][0], window_data[1][1] - window_data[0][1])
 
 def is_key_pressed(id):
     return win32api.GetAsyncKeyState(id)
@@ -161,3 +175,70 @@ class BSPParsing:
                 break
             iStepCount -= 1
         return not (pLeaf.contents & 0x1)
+
+class ScreenDrawer:
+    def __init__(self, title, redraw_delay = .2):
+        self.update_delay = redraw_delay
+        self.title = title
+        self.lines = {}
+        self._lines = {}
+        self.load()
+        self.last_pos = get_window(self.title)
+
+    def _update(self, hwnd):
+        time.sleep(1)
+        while True:
+            if self.lines:
+                win32gui.RedrawWindow(hwnd, None, None, win32con.RDW_INVALIDATE | win32con.RDW_ERASE)
+            time.sleep(self.update_delay)
+    
+    def _load(self):
+        hInstance = win32api.GetModuleHandle()
+        wndClass = win32gui.WNDCLASS()
+        wndClass.style = win32con.CS_HREDRAW | win32con.CS_VREDRAW
+        wndClass.lpfnWndProc = self.update
+        wndClass.hInstance = hInstance
+        wndClass.hCursor = win32gui.LoadCursor(None, win32con.IDC_ARROW)
+        wndClass.hbrBackground = win32gui.GetStockObject(win32con.WHITE_BRUSH)
+        wndClass.lpszClassName = 'PyCSAPI-ScreenDrawer'
+        wndClassAtom = win32gui.RegisterClass(wndClass)
+        hWindow = win32gui.CreateWindowEx(win32con.WS_EX_COMPOSITED | win32con.WS_EX_LAYERED | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST | win32con.WS_EX_TRANSPARENT, wndClassAtom, None, win32con.WS_DISABLED | win32con.WS_POPUP | win32con.WS_VISIBLE, 0, 0, win32api.GetSystemMetrics(win32con.SM_CXSCREEN), win32api.GetSystemMetrics(win32con.SM_CYSCREEN), None, None, hInstance, None)
+        update_thread = threading.Thread(target = self._update, args = (hWindow,))
+        update_thread.daemon = True
+        update_thread.start()
+        win32gui.SetLayeredWindowAttributes(hWindow, 0x00ffffff, 255, win32con.LWA_COLORKEY | win32con.LWA_ALPHA)
+        win32gui.SetWindowPos(hWindow, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+        win32gui.PumpMessages()
+    
+    def load(self):
+        load_thread = threading.Thread(target = self._load)
+        load_thread.daemon = True
+        load_thread.start()
+    
+    def update(self, hwnd, message, wParam, lParam):
+        if message == win32con.WM_DESTROY:
+            win32gui.PostQuitMessage(0)
+            return 0
+        if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != self.title:
+            return win32gui.DefWindowProc(hwnd, message, wParam, lParam)
+        if message == win32con.WM_PAINT:
+            hdc, paintStruct = win32gui.BeginPaint(hwnd)
+            for line in self._lines.values():
+                pos = get_window(self.title)
+                win32gui.MoveToEx(hdc, line[0] + pos[0][0], line[1] + pos[0][1])
+                win32gui.BeginPath(hdc)
+                win32gui.LineTo(hdc, line[2] + pos[0][0], line[3] + pos[0][1])
+                win32gui.EndPath(hdc)
+                win32gui.StrokeAndFillPath(hdc)
+            self._lines = self.lines
+            win32gui.EndPaint(hwnd, paintStruct)
+            return 0
+        else:
+            return win32gui.DefWindowProc(hwnd, message, wParam, lParam)
+    
+    def draw_line(self, line1, line2):
+        self.lines[len(self.lines.keys())] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1])]
+        return len(self.lines.keys()) - 1
+    
+    def remove_line(self, index):
+        del self.lines[index]
