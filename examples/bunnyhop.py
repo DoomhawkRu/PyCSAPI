@@ -8,14 +8,24 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-from setuptools import setup
+from pycsapi import constant
+from pycsapi import util
+import pycsapi
+import time
 
-setup(
-    name = 'pycsapi',
-    version = '1.0.2',
-    author = 'Doomhawk',
-    author_email = 'admin@doomhawk.org',
-    license = 'MIT',
-    packages = ['pycsapi',],
-    install_requires = ['requests', 'pywin32', 'psutil',],
-    zip_safe = False)
+# Make sure that you run CS:GO before running this script, otherwise you will get an error
+if __name__ == '__main__':
+    api = pycsapi.PyCSAPI()
+    player = api.get_player()
+    jump = False
+    while True:
+        if player.is_in_game() and player.is_alive():
+            if util.is_key_pressed(constant.VK_SPACE):
+                if jump:
+                    if not player.is_on_ground():
+                        player.set_jump(True)
+                        jump = False
+                elif player.is_on_ground():
+                    player.set_jump(False)
+                    jump = True
+        time.sleep(.005)

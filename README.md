@@ -20,47 +20,7 @@ py setup.py install
 
 ## Examples:
 
-### BunnyHop:
-```python
-from pycsapi import constant
-from pycsapi import util
-import pycsapi
-import time
-
-# Make sure that you run CS:GO before running this script, otherwise you will get an error
-if __name__ == '__main__':
-    api = pycsapi.PyCSAPI()
-    player = api.get_player()
-    while True:
-        if player.is_in_game() and player.is_alive():
-            if player.is_on_ground() and util.is_key_pressed(constant.VK_SPACE):
-                player.set_jump(True)
-        time.sleep(.01)
-```
-
-### GlowESP:
-```python
-import pycsapi
-import time
-
-# Make sure that you run CS:GO before running this script, otherwise you will get an error
-if __name__ == '__main__':
-    api = pycsapi.PyCSAPI()
-    player = api.get_player()
-    while True:
-        if player.is_in_game() and player.is_alive():
-            for entity in api.get_players():
-                if entity.get_team_id() != player.get_team_id():
-                    health = entity.get_health()
-                    r = 255 - (health * 2.55)
-                    g = health * 2.55
-                    b = 0
-                    entity.set_glow((r, g, b))
-        time.sleep(.01)
-```
-![GlowESP](https://raw.githubusercontent.com/DoomhawkRu/PyCSAPI/master/image/glowesp.png)
-
-More examples coming soon
+See [examples](https://github.com/DoomhawkRu/PyCSAPI/tree/master/examples) directory to get some examples
 
 ## LICENSE:
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -91,5 +51,6 @@ SOFTWARE.
 - [wep](https://www.unknowncheats.me/forum/members/2009277.html)
 - [ReactiioN](https://www.unknowncheats.me/forum/members/264622.html)
 - [Killstreak](https://www.unknowncheats.me/forum/members/242212.html)
+- [iamchets](https://www.unknowncheats.me/forum/members/500667.html)
 
 If you have any questions, please feel free to contact me via email: **admin@doomhawk.org**

@@ -8,14 +8,19 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-from setuptools import setup
+import pycsapi
+import time
 
-setup(
-    name = 'pycsapi',
-    version = '1.0.2',
-    author = 'Doomhawk',
-    author_email = 'admin@doomhawk.org',
-    license = 'MIT',
-    packages = ['pycsapi',],
-    install_requires = ['requests', 'pywin32', 'psutil',],
-    zip_safe = False)
+# Make sure that you run CS:GO before running this script, otherwise you will get an error
+if __name__ == '__main__':
+    api = pycsapi.PyCSAPI()
+    player = api.get_player()
+    while True:
+        if player.is_in_game() and player.is_alive():
+            for entity in api.get_players():
+                if entity.get_team_id() != player.get_team_id():
+                    health = entity.get_health()
+                    color = (255 - (health * 2.55), health * 2.55, 0)
+                    if not entity.is_dormant():
+                        entity.set_glow(color)
+        time.sleep(.005)
