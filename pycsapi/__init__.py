@@ -121,6 +121,7 @@ class PyCSAPI:
     
     def set_sending_packets(self, status = True):
         win32util.write_memory(self.game, self.engine + self.offset['signatures']['dwbSendPackets'], constant.STATE_SENDING_PACKETS_ENABLE if status else constant.STATE_SENDING_PACKETS_DISABLE, 'b')
+        return True
         
 class Entity:
     def __init__(self, pycsapi, player, id):
@@ -143,6 +144,18 @@ class Entity:
     def _get_offset(self):
         return win32util.read_memory(self.game, self.client + self.offset['signatures']['dwEntityList'] + ((self.id - 1) * constant.ENTITY_SIZE), 'i')
     
+    def get_collision(self):
+        x_min, y_min, z_min, x_max, y_max, z_max = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        if not self.player.is_in_game() or not self.is_alive():
+            return ((x_min, y_min, z_min), (x_max, y_max, z_max))
+        x_min = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MIN, 'f')
+        y_min = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MIN + constant.TYPE_FLOAT_SIZE, 'f')
+        z_min = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MIN + constant.TYPE_FLOAT_SIZE * 2, 'f')
+        x_max = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MAX, 'f')
+        y_max = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MAX + constant.TYPE_FLOAT_SIZE, 'f')
+        z_max = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MAX + constant.TYPE_FLOAT_SIZE * 2, 'f')
+        return ((x_min, y_min, z_min), (x_max, y_max, z_max))
+    
     def get_health(self):
         if self.player.is_in_game() and self.get_team_id():
             health = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_iHealth'], 'i')
@@ -164,6 +177,15 @@ class Entity:
                 break
             name += character.decode()
         return name
+    
+    def get_origin(self):
+        x, y, z = 0.0, 0.0, 0.0
+        if not self.player.is_in_game() or not self.is_alive():
+            return (x, y, z)
+        x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'], 'f')
+        y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE, 'f')
+        z = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE * 2, 'f')
+        return (x, y, z)
     
     def get_position(self, bone_id = constant.HITBOX_ID_HEAD, player = False):
         x, y, z = 0.0, 0.0, 0.0
@@ -240,10 +262,11 @@ class Entity:
         if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
             return False
         win32util.write_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], constant.STATE_SPOTTED if status else constant.STATE_NOT_SPOTTED, 'b')
-
+        return True
+    
     def set_glow(self, color = (255, 255, 255)):
         if not self.player.is_in_game() or not self.player.is_alive() or not self.player.get_team_id():
-            return
+            return False
         if not len(color) == 3:
             color = (255, 255, 255)
         r, g, b = color[0] / 255, color[1] / 255, color[2] / 255
@@ -258,6 +281,7 @@ class Entity:
         win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + constant.TYPE_FLOAT_SIZE * 4, 1.0, 'f')
         win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x24, 1, 'i')
         win32util.write_memory(self.game, glow_pointer + (entity_glow_index * constant.GLOW_INDEX_SIZE) + 0x25, 0, 'i')
+        return True
 
 class Player:
     def __init__(self, pycsapi):
@@ -296,7 +320,7 @@ class Player:
     
     def get_health(self):
         return self.get_entity().get_health()
-
+    
     def get_name(self):
         return self.get_entity().get_name()
     
@@ -347,38 +371,45 @@ class Player:
     
     def set_backward(self, status = True):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceBackward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
+        return True
     
     def set_flash_alpha(self, value):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self._get_local_player() + self.offset['netvars']['m_flFlashMaxAlpha'], float(value), 'f')
+        return True
     
     def set_forward(self, status = True):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceForward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
+        return True
     
     def set_jump(self, status = True):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceJump'], constant.STATE_JUMPING_ENABLE if status else constant.STATE_JUMPING_DISABLE, 'i')
+        return True
     
     def set_left(self, status = True):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceLeft'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
+        return True
     
     def set_right(self, status = True):
         if not self.is_in_game() or not self.is_alive():
-            return
+            return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
+        return True
     
     def set_shoot(self, status = True):
         if not self.is_in_game() or not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceAttack'], constant.STATE_SHOOTING_ENABLE if status else constant.STATE_SHOOTING_DISABLE, 'i')
+        return True
     
     def set_view_angle(self, x, y):
         if not self.is_in_game() or not self.is_alive():

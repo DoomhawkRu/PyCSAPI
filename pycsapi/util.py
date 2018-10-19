@@ -15,6 +15,7 @@ import time
 import win32api
 import win32con
 import win32gui
+import win32ui
 try:
     from pycsapi import structures
 except:
@@ -80,7 +81,7 @@ def world_to_screen(_from, matrix, title):
     x = width / 2 + 0.5 * (matrix[0][0] * _from[0] + matrix[0][1] * _from[1] + matrix[0][2] * _from[2] + matrix[0][3]) * (1 / w) * width + 0.5
     y = height / 2 - 0.5 * (matrix[1][0] * _from[0] + matrix[1][1] * _from[1] + matrix[1][2] * _from[2] + matrix[1][3]) * (1 / w) * height + 0.5
     return (x, y)
-    
+
 class RayTracing:
     def __init__(self, origin, direction):
         self.origin = origin
@@ -180,82 +181,59 @@ class BSPParsing:
         return not (pLeaf.contents & 0x1)
 
 class ScreenDrawer:
-    def __init__(self, title, redraw_delay = .2):
-        self.update_delay = redraw_delay
-        self.title = title
+    def __init__(self, title, dynamical = False):
         self.lines = {}
-        self.rectangle = {}
-        self.load()
-        self.last_pos = get_window(self.title)
-
-    def _update(self, hwnd):
-        time.sleep(1)
-        while True:
-            win32gui.RedrawWindow(hwnd, None, None, win32con.RDW_INVALIDATE | win32con.RDW_ERASE)
-            time.sleep(self.update_delay)
-    
-    def _load(self):
-        hInstance = win32api.GetModuleHandle()
-        wndClass = win32gui.WNDCLASS()
-        wndClass.style = win32con.CS_HREDRAW | win32con.CS_VREDRAW
-        wndClass.lpfnWndProc = self.update
-        wndClass.hInstance = hInstance
-        wndClass.hCursor = win32gui.LoadCursor(None, win32con.IDC_ARROW)
-        wndClass.hbrBackground = win32gui.GetStockObject(win32con.WHITE_BRUSH)
-        wndClass.lpszClassName = 'PyCSAPI-ScreenDrawer'
-        wndClassAtom = win32gui.RegisterClass(wndClass)
-        hWindow = win32gui.CreateWindowEx(win32con.WS_EX_COMPOSITED | win32con.WS_EX_LAYERED | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST | win32con.WS_EX_TRANSPARENT, wndClassAtom, None, win32con.WS_DISABLED | win32con.WS_POPUP | win32con.WS_VISIBLE, 0, 0, win32api.GetSystemMetrics(win32con.SM_CXSCREEN), win32api.GetSystemMetrics(win32con.SM_CYSCREEN), None, None, hInstance, None)
-        update_thread = threading.Thread(target = self._update, args = (hWindow,))
+        self.rectangles = {}
+        self.texts = {}
+        self.dynamical = dynamical
+        update_thread = threading.Thread(target = self._update, args = (win32gui.FindWindow(None, title),))
         update_thread.daemon = True
         update_thread.start()
-        win32gui.SetLayeredWindowAttributes(hWindow, 0x00FFFFFF, 255, win32con.LWA_COLORKEY | win32con.LWA_ALPHA)
-        win32gui.SetWindowPos(hWindow, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
-        win32gui.PumpMessages()
     
-    def load(self):
-        load_thread = threading.Thread(target = self._load)
-        load_thread.daemon = True
-        load_thread.start()
+    # Anyone knows how to avoid flicker?
+    def _update(self, hwnd):
+        while True:
+            wDC = win32gui.GetWindowDC(hwnd)
+            dc = win32ui.CreateDCFromHandle(wDC)
+            win32gui.SetBkMode(wDC, win32con.TRANSPARENT)
+            for id, line in self.lines.copy().items():
+                win32gui.MoveToEx(wDC, line[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), line[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
+                win32gui.LineTo(wDC, line[2] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), line[3] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
+                if self.dynamical:
+                    del self.lines[id]
+            for id, rectangle in self.rectangles.copy().items():
+                win32gui.Rectangle(wDC, rectangle[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), rectangle[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION), rectangle[2] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), rectangle[3] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
+                if self.dynamical:
+                    del self.rectangles[id]
+            for id, text in self.texts.copy().items():
+                win32gui.SetTextColor(wDC, win32api.RGB(int(text[3][0]), int(text[3][1]), int(text[3][2])))
+                win32gui.DrawText(wDC, text[2], -1, (text[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), text[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION), text[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER) + 50, text[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION) + 50), win32con.DT_NOCLIP)
+                if self.dynamical:
+                    del self.texts[id]
+            dc.DeleteDC()
+            win32gui.ReleaseDC(hwnd, wDC)
+            time.sleep(.001)
     
-    def update(self, hwnd, message, wParam, lParam):
-        if message == win32con.WM_DESTROY:
-            win32gui.PostQuitMessage(0)
-            return 0
-        if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != self.title:
-            return win32gui.DefWindowProc(hwnd, message, wParam, lParam)
-        if message == win32con.WM_PAINT:
-            hdc, paintStruct = win32gui.BeginPaint(hwnd)
-            pos = get_window(self.title)
-            for line in self.lines.copy().values():
-                hPen = win32gui.CreatePen(win32con.BS_SOLID, line[4], line[5])
-                win32gui.SelectObject(hdc, hPen)
-                win32gui.MoveToEx(hdc, line[0] + pos[0][0], line[1] + pos[0][1])
-                win32gui.BeginPath(hdc)
-                win32gui.LineTo(hdc, line[2] + pos[0][0], line[3] + pos[0][1])
-                win32gui.EndPath(hdc)
-                win32gui.StrokeAndFillPath(hdc)
-            for rectangle in self.rectangle.copy().values():
-                hPen = win32gui.CreatePen(win32con.BS_SOLID, rectangle[4], rectangle[5])
-                win32gui.SelectObject(hdc, hPen)
-                win32gui.BeginPath(hdc)
-                win32gui.Rectangle(hdc, rectangle[0] + pos[0][0], rectangle[1] + pos[0][1], rectangle[2] + pos[0][0], rectangle[3] + pos[0][1])
-                win32gui.EndPath(hdc)
-                win32gui.StrokeAndFillPath(hdc)
-            win32gui.EndPaint(hwnd, paintStruct)
-            return 0
-        else:
-            return win32gui.DefWindowProc(hwnd, message, wParam, lParam)
-    
-    def draw_line(self, line1, line2, thickness = 1, color = (0, 0, 0)):
-        self.lines[len(self.lines.keys())] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1]), thickness, color[0] * 256 * 256 + color[1] * 256 + color[2] - 1]
-        return len(self.lines.keys()) - 1
+    def draw_line(self, line1, line2):
+        index = len(self.lines.keys())
+        self.lines[index] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1])]
+        return index
     
     def remove_line(self, index):
         del self.lines[index]
     
-    def draw_rectangle(self, line1, line2, thickness = 1, color = (0, 0, 0)):
-        self.rectangle[len(self.rectangle.keys())] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1]), thickness, color[0] * 256 * 256 + color[1] * 256 + color[2] - 1]
-        return len(self.rectangle.keys()) - 1
+    def draw_rectangle(self, line1, line2):
+        index = len(self.rectangles.keys())
+        self.rectangles[index] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1])]
+        return index
     
     def remove_rectangle(self, index):
-        del self.rectangle[index]
+        del self.rectangles[index]
+    
+    def draw_text(self, x, y, text, color = (255, 255, 255)):
+        index = len(self.texts.keys())
+        self.texts[index] = [int(x), int(y), str(text), color]
+        return index
+    
+    def remove_text(self, index):
+        del self.texts[index]
