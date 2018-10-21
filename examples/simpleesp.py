@@ -15,23 +15,34 @@ import pycsapi
 import time
 
 # Make sure that you run CS:GO before running this script, otherwise you will get an error
-# WARNING: This script working really bad due to some issues described in the pycsapi/util.py file. We are working hard to find a way to fix it
 if __name__ == '__main__':
     api = pycsapi.PyCSAPI()
     player = api.get_player()
-    drawer = util.ScreenDrawer(constant.PROCESS_NAME, True)
+    drawer = util.ScreenDrawer(constant.PROCESS_NAME)
+    list = []
     while True:
         if player.is_in_game() and player.is_alive():
-            to_draw = []
-            for _player in api.get_players():
-                if _player.is_alive() and _player.get_team_id() != player.get_team_id():
-                    coords = util.world_to_screen(_player.get_position(), api.get_view_matrix(), constant.PROCESS_NAME)
-                    if coords:
-                        health = _player.get_health()
-                        distance = player.get_distance_to(_player)
-                        distance = int(math.sqrt(distance[0] ** 2 + distance[1] ** 2 + distance[2] ** 2))
-                        if distance < 3000:
-                            to_draw.append([coords[0], coords[1], _player.get_name() + '\nDistance: ' + str(distance), (255 - health * 2.55, health * 2.55, 0)])
-            for data in to_draw:
-                drawer.draw_text(data[0], data[1], data[2], data[3])
+            for entity in api.get_players():
+                if entity.is_alive() and entity.get_team_id() != player.get_team_id() and not entity.is_dormant():
+                    entity_head = entity.get_position()
+                    entity_top = [entity_head[0], entity_head[1], entity_head[2] + 10]
+                    entity_foot = entity.get_origin()
+                    vHead = util.world_to_screen(entity_top, api.get_view_matrix(), constant.PROCESS_NAME)
+                    vFoot = util.world_to_screen(entity_foot, api.get_view_matrix(), constant.PROCESS_NAME)
+                    health = entity.get_health()
+                    if vHead and vFoot:
+                        h = abs(vFoot[1] - vHead[1])
+                        w = h / 2
+                        if entity.get_id() not in list:
+                            list.append(entity.get_id())
+                        drawer.draw_rectangle(entity.get_id(), vHead[0] - w / 2, vHead[1], vHead[0] + w / 2, vHead[1] + h)
+                        drawer.draw_rectangle(entity.get_id() + 64, vHead[0] - w / 2 - 7, vHead[1] + (h / 100 * (100 - health)), vHead[0] - w / 2 - 2, vHead[1] + h, (255 - health * 2.55, health * 2.55, 0))
+                    else:
+                        if entity.get_id() in list and str(entity.get_id()) in drawer.rectangles:
+                            del drawer.rectangles[str(entity.get_id())]
+                            del drawer.rectangles[str(entity.get_id() + 64)]
+                else:
+                    if entity.get_id() in list and str(entity.get_id()) in drawer.rectangles:
+                        del drawer.rectangles[str(entity.get_id())]
+                        del drawer.rectangles[str(entity.get_id() + 64)]
         time.sleep(.001)

@@ -43,9 +43,12 @@ def check_angles(pitch, yaw):
         return False
     return True
 
+def dot_square(distance):
+    return math.sqrt(distance[0] ** 2 + distance[1] ** 2 + distance[2] ** 2)
+
 def get_client_size(title):
     window_data = get_window(title)
-    return (window_data[1][0] - window_data[0][0], window_data[1][1] - window_data[0][1])
+    return (window_data[2] - window_data[0], window_data[3] - window_data[1])
     
 def get_window(title):
     x1, y1, x2, y2 = win32gui.GetWindowRect(win32gui.FindWindow(None, title))
@@ -57,7 +60,7 @@ def get_window(title):
     else:
         diffx = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
         diffy = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
-        return ((window[0][0] + diffx, window[0][1] + diffy), (window[1][0], window[1][1]))
+        return (window[0][0] + diffx, window[0][1] + diffy, window[1][0], window[1][1])
 
 def is_key_pressed(id):
     return win32api.GetAsyncKeyState(id)
@@ -181,59 +184,45 @@ class BSPParsing:
         return not (pLeaf.contents & 0x1)
 
 class ScreenDrawer:
-    def __init__(self, title, dynamical = False):
+    def __init__(self, title):
         self.lines = {}
         self.rectangles = {}
         self.texts = {}
-        self.dynamical = dynamical
-        update_thread = threading.Thread(target = self._update, args = (win32gui.FindWindow(None, title),))
+        self._clear = False
+        self.SM_CYBORDER = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
+        self.SM_CYCAPTION = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
+        hwnd = win32gui.FindWindow(None, title)
+        update_thread = threading.Thread(target = self._update, args = (hwnd, win32gui.GetWindowDC(hwnd)))
         update_thread.daemon = True
         update_thread.start()
     
     # Anyone knows how to avoid flicker?
-    def _update(self, hwnd):
+    def _update(self, hwnd, dc):
         while True:
-            wDC = win32gui.GetWindowDC(hwnd)
-            dc = win32ui.CreateDCFromHandle(wDC)
-            win32gui.SetBkMode(wDC, win32con.TRANSPARENT)
-            for id, line in self.lines.copy().items():
-                win32gui.MoveToEx(wDC, line[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), line[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
-                win32gui.LineTo(wDC, line[2] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), line[3] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
-                if self.dynamical:
-                    del self.lines[id]
-            for id, rectangle in self.rectangles.copy().items():
-                win32gui.Rectangle(wDC, rectangle[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), rectangle[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION), rectangle[2] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), rectangle[3] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION))
-                if self.dynamical:
-                    del self.rectangles[id]
-            for id, text in self.texts.copy().items():
-                win32gui.SetTextColor(wDC, win32api.RGB(int(text[3][0]), int(text[3][1]), int(text[3][2])))
-                win32gui.DrawText(wDC, text[2], -1, (text[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER), text[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION), text[0] + win32api.GetSystemMetrics(win32con.SM_CYBORDER) + 50, text[1] + win32api.GetSystemMetrics(win32con.SM_CYCAPTION) + 50), win32con.DT_NOCLIP)
-                if self.dynamical:
-                    del self.texts[id]
-            dc.DeleteDC()
-            win32gui.ReleaseDC(hwnd, wDC)
-            time.sleep(.001)
+            win32gui.SetBkMode(dc, win32con.TRANSPARENT)
+            for line in self.lines.copy().values():
+                win32gui.MoveToEx(dc, line[0] + self.SM_CYBORDER, line[1] + self.SM_CYCAPTION)
+                win32gui.LineTo(dc, line[2] + self.SM_CYBORDER, line[3] + self.SM_CYCAPTION)
+            for rectangle in self.rectangles.copy().values():
+                if rectangle[4]:
+                    brush = win32gui.CreateSolidBrush(rectangle[4])
+                    win32gui.SelectObject(dc, brush)
+                else:
+                    win32gui.SelectObject(dc, win32gui.GetStockObject(win32con.NULL_BRUSH))
+                win32gui.Rectangle(dc, rectangle[0] + self.SM_CYBORDER, rectangle[1] + self.SM_CYCAPTION, rectangle[2] + self.SM_CYBORDER, rectangle[3] + self.SM_CYCAPTION)
+                if rectangle[4]:
+                    win32gui.DeleteObject(brush)
+            for text in self.texts.copy().values():
+                win32gui.SetTextColor(dc, text[3])
+                win32gui.ExtTextOut(dc, text[0] + self.SM_CYBORDER, text[1] + self.SM_CYCAPTION, 0x2, (0, 0, 0, 0), text[2])
     
-    def draw_line(self, line1, line2):
-        index = len(self.lines.keys())
-        self.lines[index] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1])]
-        return index
+    def draw_line(self, id, x1, y1, x2, y2):
+        self.lines[str(id)] = [int(x1), int(y1), int(x2), int(y2)]
     
-    def remove_line(self, index):
-        del self.lines[index]
+    def draw_rectangle(self, id, x1, y1, x2, y2, color = None):
+        if color and color == (0, 0, 0):
+            color = (1, 1, 1)
+        self.rectangles[str(id)] = [int(x1), int(y1), int(x2), int(y2), None if not color else win32api.RGB(int(color[0]), int(color[1]), int(color[2]))]
     
-    def draw_rectangle(self, line1, line2):
-        index = len(self.rectangles.keys())
-        self.rectangles[index] = [int(line1[0]), int(line1[1]), int(line2[0]), int(line2[1])]
-        return index
-    
-    def remove_rectangle(self, index):
-        del self.rectangles[index]
-    
-    def draw_text(self, x, y, text, color = (255, 255, 255)):
-        index = len(self.texts.keys())
-        self.texts[index] = [int(x), int(y), str(text), color]
-        return index
-    
-    def remove_text(self, index):
-        del self.texts[index]
+    def draw_text(self, id, x, y, text, color = (255, 255, 255)):
+        self.texts[str(id)] = [int(x), int(y), str(text), win32api.RGB(int(color[0]), int(color[1]), int(color[2]))]

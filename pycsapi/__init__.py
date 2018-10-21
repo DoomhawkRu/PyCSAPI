@@ -251,7 +251,7 @@ class Entity:
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bGunGameImmunity'], 'b') == constant.STATE_DORMANT
     
     def is_player(self):
-        return self.player.is_in_game() and bool(self.get_health()) and (self.get_team_id() == constant.TEAM_ID_T or self.get_team_id() == constant.TEAM_ID_CT)
+        return self.player.is_in_game() and (self.get_team_id() == constant.TEAM_ID_T or self.get_team_id() == constant.TEAM_ID_CT)
     
     def is_scoped(self):
         if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
@@ -352,7 +352,7 @@ class Player:
         return win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_State'], 'i') == constant.STATE_IN_GAME_CONNECTED
     
     def is_on_ground(self):
-        return self.is_in_game() and bool(self.is_alive()) and self.get_team_id() > 1 and bool(self._get_flags() & (1 << 0))
+        return self.is_in_game() and self.is_alive() and self.get_team_id() > 1 and bool(self._get_flags() & (1 << 0))
     
     def is_scoped(self):
         return self.get_entity().is_scoped()

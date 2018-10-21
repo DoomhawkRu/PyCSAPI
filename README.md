@@ -20,7 +20,7 @@ py setup.py install
 
 ## Examples:
 
-See [examples](https://github.com/DoomhawkRu/PyCSAPI/tree/master/examples) directory to get some examples
+Check [examples](https://github.com/DoomhawkRu/PyCSAPI/tree/master/examples) directory to get some examples
 
 ## LICENSE:
 Permission is hereby granted, free of charge, to any person obtaining a copy
