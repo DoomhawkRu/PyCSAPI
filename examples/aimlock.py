@@ -48,4 +48,4 @@ if __name__ == '__main__':
                     if distance_x < aimfov and distance_y < aimfov:
                         player.set_view_angle(pitch, yaw)
                         break
-        time.sleep(1 / 4)
+        time.sleep(1 / 256)
