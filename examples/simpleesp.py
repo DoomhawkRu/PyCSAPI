@@ -18,7 +18,7 @@ import time
 if __name__ == '__main__':
     api = pycsapi.PyCSAPI()
     player = api.get_player()
-    drawer = util.ScreenDrawer(constant.PROCESS_NAME)
+    drawer = util.ScreenDrawer(constant.PROCESS_TITLE)
     list = []
     while True:
         if player.is_in_game() and player.is_alive():
@@ -27,8 +27,8 @@ if __name__ == '__main__':
                     entity_head = entity.get_position()
                     entity_top = [entity_head[0], entity_head[1], entity_head[2] + 10]
                     entity_foot = entity.get_origin()
-                    vHead = util.world_to_screen(entity_top, api.get_view_matrix(), constant.PROCESS_NAME)
-                    vFoot = util.world_to_screen(entity_foot, api.get_view_matrix(), constant.PROCESS_NAME)
+                    vHead = util.world_to_screen(entity_top, api.get_view_matrix(), constant.PROCESS_TITLE)
+                    vFoot = util.world_to_screen(entity_foot, api.get_view_matrix(), constant.PROCESS_TITLE)
                     health = entity.get_health()
                     if vHead and vFoot:
                         h = abs(vFoot[1] - vHead[1])
@@ -45,4 +45,4 @@ if __name__ == '__main__':
                     if entity.get_id() in list and str(entity.get_id()) in drawer.rectangles:
                         del drawer.rectangles[str(entity.get_id())]
                         del drawer.rectangles[str(entity.get_id() + 64)]
-        time.sleep(.001)
+        time.sleep(1 / 1024)

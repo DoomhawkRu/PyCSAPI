@@ -21,9 +21,9 @@ except:
 
 class PyCSAPI:
     def __init__(self):
-        self.game = win32util.get_process(constant.PROCESS_TITLE)
+        self.game = win32util.get_process(constant.PROCESS_NAME)
         if not self.game:
-            raise Exception('Process ' + constant.PROCESS_TITLE + ' is not found!')
+            raise Exception('Process ' + constant.PROCESS_NAME + ' is not found!')
         self.client = win32util.get_module_offset(win32util.get_module(self.game, constant.CLIENT_DLL))
         self.engine = win32util.get_module_offset(win32util.get_module(self.game, constant.ENGINE_DLL))
         if not self.client or not self.engine:
@@ -391,18 +391,6 @@ class Player:
         if not self.is_in_game() or not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceJump'], constant.STATE_JUMPING_ENABLE if status else constant.STATE_JUMPING_DISABLE, 'i')
-        return True
-    
-    def set_left(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
-            return False
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceLeft'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
-        return True
-    
-    def set_right(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
-            return False
-        win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
         return True
     
     def set_shoot(self, status = True):

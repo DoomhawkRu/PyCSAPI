@@ -11,11 +11,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 from ctypes import *
 import math
 import threading
-import time
 import win32api
 import win32con
 import win32gui
-import win32ui
 try:
     from pycsapi import structures
 except:
@@ -43,13 +41,19 @@ def check_angles(pitch, yaw):
         return False
     return True
 
+def distance_to_angle(distance, punch = (0, 0)):
+    yaw = (math.atan2(distance[1], distance[0]) * 180 / math.pi) - (punch[1] * 2)
+    pitch = (math.atan2(-distance[2], math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])) * 180 / math.pi) - (punch[0] * 2)
+    pitch, yaw = normalize_angles(pitch, yaw)
+    return (pitch, yaw)
+
 def dot_square(distance):
-    return math.sqrt(distance[0] ** 2 + distance[1] ** 2 + distance[2] ** 2)
+    return math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])
 
 def get_client_size(title):
     window_data = get_window(title)
     return (window_data[2] - window_data[0], window_data[3] - window_data[1])
-    
+
 def get_window(title):
     x1, y1, x2, y2 = win32gui.GetWindowRect(win32gui.FindWindow(None, title))
     w, h, x, y = win32gui.GetClientRect(win32gui.FindWindow(None, title))
@@ -61,6 +65,11 @@ def get_window(title):
         diffx = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
         diffy = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
         return (window[0][0] + diffx, window[0][1] + diffy, window[1][0], window[1][1])
+
+def health_to_rgb(health):
+    if health > 100 or health < 0:
+        return (0, 0, 0)
+    return (255 - health * 2.55, health * 2.55, health)
 
 def is_key_pressed(id):
     return win32api.GetAsyncKeyState(id)
@@ -154,9 +163,6 @@ class BSPParsing:
     
     def get_leaf_from_point(self, point):
         node = 0
-        pNode = None
-        pPlane = None
-        d = 0
         while node >= 0:
             pNode = self.nodeLump[node]
             pPlane = self.planeLump[pNode.planenum]
@@ -174,7 +180,8 @@ class BSPParsing:
         vPoint = vStart
         iStepCount = int(vDirection.length())
         vDirection /= iStepCount
-        pLeaf = None
+        if not iStepCount:
+            return False
         while iStepCount:
             vPoint = vPoint + vDirection
             pLeaf = self.get_leaf_from_point(vPoint)

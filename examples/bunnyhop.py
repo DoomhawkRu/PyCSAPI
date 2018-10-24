@@ -28,4 +28,4 @@ if __name__ == '__main__':
                 elif player.is_on_ground():
                     player.set_jump(False)
                     jump = True
-        time.sleep(.005)
+        time.sleep(1 / 256)

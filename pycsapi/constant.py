@@ -10,8 +10,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 CLIENT_DLL = 'client_panorama.dll'
 ENGINE_DLL = 'engine.dll'
-PROCESS_NAME = 'Counter-Strike: Global Offensive'
-PROCESS_TITLE = 'csgo.exe'
+PROCESS_NAME = 'csgo.exe'
+PROCESS_TITLE = 'Counter-Strike: Global Offensive'
 URL_OFFSETS = 'https://raw.githubusercontent.com/frk1/hazedumper/master/csgo.json'
 
 TEAM_ID_INVALID = 0

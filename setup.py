@@ -12,7 +12,7 @@ from setuptools import setup
 
 setup(
     name = 'pycsapi',
-    version = '1.0.4',
+    version = '1.0.5',
     author = 'Doomhawk',
     author_email = 'admin@doomhawk.org',
     license = 'MIT',

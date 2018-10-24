@@ -23,4 +23,4 @@ if __name__ == '__main__':
                     color = (255 - (health * 2.55), health * 2.55, 0)
                     if not entity.is_dormant():
                         entity.set_glow(color)
-        time.sleep(.005)
+        time.sleep(1 / 256)

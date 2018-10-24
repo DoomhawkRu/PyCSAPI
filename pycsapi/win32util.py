@@ -15,6 +15,27 @@ import struct
 
 class MODULEENTRY32(ctypes.Structure): _fields_ = [('dwSize', ctypes.wintypes.DWORD), ('th32ModuleID', ctypes.wintypes.DWORD), ('th32ProcessID', ctypes.wintypes.DWORD), ('GlblcntUsage', ctypes.wintypes.DWORD), ('ProccntUsage', ctypes.wintypes.DWORD), ('modBaseAddr', ctypes.POINTER(ctypes.wintypes.BYTE)), ('modBaseSize', ctypes.wintypes.DWORD), ('hModule', ctypes.wintypes.HMODULE), ('szModule', ctypes.c_char * 256), ('szExePath', ctypes.c_char * 260)]
 
+def __get_subindex(list, sub_list):
+    cache = []
+    index = 0
+    for elem in list:
+        elem &= 0xFF
+        if len(sub_list) == len(cache):
+            return index - len(sub_list)
+        if elem == sub_list[len(cache)] or sub_list[len(cache)] == -1:
+            cache.append(elem if sub_list[len(cache)] != -1 else -1)
+        else:
+            cache = []
+        index += 1
+    return False
+
+def find_pattern(pid, name, pattern):
+    module = get_module_offset(get_module(pid, name))
+    if not module or not pattern:
+        return False
+    data = read_memory(pid, module, None, get_module_size(pid, name))
+    return __get_subindex(data, pattern)
+
 def get_process(name):
     data = [proc.pid for proc in psutil.process_iter() if proc.name().lower() == name.lower()]
     return data[0] if data else 0
@@ -32,20 +53,41 @@ def get_module(pid, name):
         ctypes.windll.kernel32.CloseHandle(hModule)
     return 0
 
+def get_module_size(pid, name):
+    hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18, pid)
+    if hModule:
+        module_entry = MODULEENTRY32()
+        module_entry.dwSize = ctypes.sizeof(module_entry)
+        success = ctypes.windll.kernel32.Module32First(hModule, ctypes.byref(module_entry))
+        while success:
+            if module_entry.th32ProcessID == pid and module_entry.szModule.decode() == name:
+                return module_entry.modBaseSize
+            success = ctypes.windll.kernel32.Module32Next(hModule, ctypes.byref(module_entry))
+        ctypes.windll.kernel32.CloseHandle(hModule)
+    return 0
+
 def get_module_offset(module):
     if not module:
         return None
     return ctypes.addressof(module.contents)
 
-def read_memory(pid, address, type):
-    size = (4 if (type == 'i' or type == 'f') else 1)
+def read_memory(pid, address, type, size = None):
+    type = None if size else type
+    size = size if size else (4 if (type == 'i' or type == 'f') else 1)
     buffer = (ctypes.c_byte * size)()
     process = ctypes.windll.kernel32.OpenProcess(0x1F0FFF, 0, pid)
     ctypes.windll.kernel32.ReadProcessMemory(process, address, buffer, size, ctypes.byref(ctypes.c_ulonglong(0)))
     ctypes.windll.kernel32.CloseHandle(process)
-    return struct.unpack(type, buffer)[0]
+    if type:
+        return struct.unpack(type, buffer)[0]
+    else:
+        return struct.unpack('b' * size, buffer)
 
-def write_memory(pid, address, data, type):
+def write_memory(pid, address, data, type, size = None):
+    type = None if size else type
     process = ctypes.windll.kernel32.OpenProcess(0x1F0FFF, 0, pid)
-    ctypes.windll.kernel32.WriteProcessMemory(process, address, struct.pack(type, data) if type == 'f' or type == 'i' else (bytes([data]) if type == 'b' else chr(data)), (4 if (type == 'i' or type == 'f') else 1), ctypes.byref(ctypes.c_ulong(0)))
+    if type:
+        ctypes.windll.kernel32.WriteProcessMemory(process, address, struct.pack(type, data) if type == 'f' or type == 'i' else (bytes([data]) if type == 'b' else chr(data)), (4 if (type == 'i' or type == 'f') else 1), ctypes.byref(ctypes.c_ulong(0)))
+    else:
+        ctypes.windll.kernel32.WriteProcessMemory(process, address, bytes([data]), size, ctypes.byref(ctypes.c_ulong(0)))
     ctypes.windll.kernel32.CloseHandle(process)

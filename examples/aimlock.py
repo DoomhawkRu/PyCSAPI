@@ -41,16 +41,11 @@ if __name__ == '__main__':
             iter += 1
         if player.is_in_game() and player.is_alive():
             for entity in api.get_players():
-                if entity.get_team_id() != player.get_team_id() and not entity.is_dormant():
-                    distance = player.get_distance_to(entity)
+                if entity.get_team_id() != player.get_team_id() and not entity.is_dormant() and player.is_visible(entity):
                     player_angle = player.get_view_angle()
-                    player_punch = player.get_punch()
-                    yaw = (math.atan2(distance[1], distance[0]) * 180 / math.pi) - (player_punch[1] * 2)
-                    hypotenuse = math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])
-                    pitch = (math.atan2(-distance[2], hypotenuse) * 180 / math.pi) - (player_punch[0] * 2)
-                    pitch, yaw = util.normalize_angles(pitch, yaw)
+                    pitch, yaw = util.distance_to_angle(player.get_distance_to(entity), player.get_punch())
                     distance_x, distance_y = util.calc_distance(player_angle[0], player_angle[1], pitch, yaw)
-                    if distance_x < aimfov and distance_y < aimfov and player.is_visible_fov(entity):
+                    if distance_x < aimfov and distance_y < aimfov:
                         player.set_view_angle(pitch, yaw)
                         break
-        time.sleep(.005)
+        time.sleep(1 / 4)
