@@ -10,7 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import ctypes
 import ctypes.wintypes
-import psutil
+import os
 import struct
 
 class MODULEENTRY32(ctypes.Structure): _fields_ = [('dwSize', ctypes.wintypes.DWORD), ('th32ModuleID', ctypes.wintypes.DWORD), ('th32ProcessID', ctypes.wintypes.DWORD), ('GlblcntUsage', ctypes.wintypes.DWORD), ('ProccntUsage', ctypes.wintypes.DWORD), ('modBaseAddr', ctypes.POINTER(ctypes.wintypes.BYTE)), ('modBaseSize', ctypes.wintypes.DWORD), ('hModule', ctypes.wintypes.HMODULE), ('szModule', ctypes.c_char * 256), ('szExePath', ctypes.c_char * 260)]
@@ -29,16 +29,32 @@ def __get_subindex(list, sub_list):
         index += 1
     return False
 
-def find_pattern(pid, name, pattern):
+def find_pattern(pid, name, pattern, full_address = False):
     module = get_module_offset(get_module(pid, name))
     if not module or not pattern:
         return False
     data = read_memory(pid, module, None, get_module_size(pid, name))
-    return __get_subindex(data, pattern)
+    return __get_subindex(data, pattern) + (module if full_address else 0)
 
 def get_process(name):
-    data = [proc.pid for proc in psutil.process_iter() if proc.name().lower() == name.lower()]
-    return data[0] if data else 0
+    count = 32
+    while True:
+        pids = (ctypes.wintypes.DWORD * count)()
+        cb = ctypes.sizeof(pids)
+        bytes_returned = ctypes.wintypes.DWORD()
+        if ctypes.windll.psapi.EnumProcesses(ctypes.byref(pids), cb, ctypes.byref(bytes_returned)):
+            if bytes_returned.value < cb:
+                break
+            else:
+                count *= 2
+    for pid in pids:
+        hwnd = ctypes.windll.kernel32.OpenProcess(0x400, False, pid)
+        if hwnd:
+            process_name = (ctypes.c_char * 260)()
+            if ctypes.windll.psapi.GetProcessImageFileNameA(hwnd, process_name, 260) > 0 and os.path.basename(process_name.value).decode().lower() == name.lower() and ctypes.windll.kernel32.CloseHandle(hwnd):
+                return pid
+        ctypes.windll.kernel32.CloseHandle(hwnd)
+    return 0
 
 def get_module(pid, name):
     hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18, pid)

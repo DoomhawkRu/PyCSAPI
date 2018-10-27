@@ -12,10 +12,9 @@ from setuptools import setup
 
 setup(
     name = 'pycsapi',
-    version = '1.0.5.1',
+    version = '1.0.6',
     author = 'Doomhawk',
     author_email = 'admin@doomhawk.org',
     license = 'MIT',
     packages = ['pycsapi',],
-    install_requires = ['requests', 'pywin32', 'psutil',],
     zip_safe = False)

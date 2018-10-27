@@ -8,12 +8,10 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-from ctypes import *
+import ctypes
+import ctypes.wintypes
 import math
 import threading
-import win32api
-import win32con
-import win32gui
 try:
     from pycsapi import structures
 except:
@@ -55,24 +53,26 @@ def get_client_size(title):
     return (window_data[2] - window_data[0], window_data[3] - window_data[1])
 
 def get_window(title):
-    x1, y1, x2, y2 = win32gui.GetWindowRect(win32gui.FindWindow(None, title))
-    w, h, x, y = win32gui.GetClientRect(win32gui.FindWindow(None, title))
-    client = (x, y)
-    window = ((x1, y1), (x2, y2))
+    rect = ctypes.wintypes.RECT()
+    client_rect = ctypes.wintypes.RECT()
+    ctypes.windll.user32.GetWindowRect(ctypes.windll.user32.FindWindowW(None, title), ctypes.byref(rect))
+    ctypes.windll.user32.GetClientRect(ctypes.windll.user32.FindWindowW(None, title), ctypes.byref(client_rect))
+    client = (client_rect.right, client_rect.bottom)
+    window = ((rect.left, rect.top), (rect.right, rect.bottom))
     if window[1] == client:
         return window
     else:
-        diffx = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
-        diffy = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
+        diffx = ctypes.windll.user32.GetSystemMetrics(0x6)
+        diffy = ctypes.windll.user32.GetSystemMetrics(0x4)
         return (window[0][0] + diffx, window[0][1] + diffy, window[1][0], window[1][1])
 
 def health_to_rgb(health):
     if health > 100 or health < 0:
         return (0, 0, 0)
-    return (255 - health * 2.55, health * 2.55, health)
+    return (int(255 - health * 2.55), int(health * 2.55), 0)
 
 def is_key_pressed(id):
-    return win32api.GetAsyncKeyState(id)
+    return ctypes.windll.user32.GetAsyncKeyState(id)
 
 def normalize_angles(pitch, yaw):
     while pitch > 89:
@@ -99,6 +99,7 @@ class RayTracing:
         self.origin = origin
         self.direction = direction
         self.direction_inverse = ((1 / self.direction[0]) if self.direction[0] != 0 else 0, (1 / self.direction[1]) if self.direction[1] != 0 else 0, (1 / self.direction[2]) if self.direction[2] != 0 else 0)
+    
     
     def trace(self, left_bottom, right_top, distance):
         if self.direction[0] == 0 and (self.origin[0] < min(left_bottom[0], right_top[0]) or self.origin[0] > max(left_bottom[0], right_top[0])):
@@ -145,19 +146,19 @@ class BSPParsing:
     def get_lump_from_id(self, id):
         lump = []
         if id == 1:
-            numLumps = self.header.lumps[id].filelen / sizeof(structures.dplane_t)
+            numLumps = self.header.lumps[id].filelen / ctypes.sizeof(structures.dplane_t)
             for i in range(int(numLumps)):
                 lump.append(structures.dplane_t())
         elif id == 5:
-            numLumps = self.header.lumps[id].filelen / sizeof(structures.dnode_t)
+            numLumps = self.header.lumps[id].filelen / ctypes.sizeof(structures.dnode_t)
             for i in range(int(numLumps)):
                 lump.append(structures.dnode_t())
         elif id == 10:
-            numLumps = self.header.lumps[id].filelen / sizeof(structures.dleaf_t)
+            numLumps = self.header.lumps[id].filelen / ctypes.sizeof(structures.dleaf_t)
             for i in range(int(numLumps)):
                 lump.append(structures.dleaf_t())
         for i in range(int(numLumps)):
-            self.handle.seek(self.header.lumps[id].fileofs + (i * sizeof(lump[i])))
+            self.handle.seek(self.header.lumps[id].fileofs + (i * ctypes.sizeof(lump[i])))
             self.handle.readinto(lump[i])
         return lump
     
@@ -196,32 +197,32 @@ class ScreenDrawer:
         self.rectangles = {}
         self.texts = {}
         self._clear = False
-        self.SM_CYBORDER = win32api.GetSystemMetrics(win32con.SM_CYBORDER)
-        self.SM_CYCAPTION = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
-        hwnd = win32gui.FindWindow(None, title)
-        update_thread = threading.Thread(target = self._update, args = (hwnd, win32gui.GetWindowDC(hwnd)))
+        self.SM_CYBORDER = ctypes.windll.user32.GetSystemMetrics(0x6)
+        self.SM_CYCAPTION = ctypes.windll.user32.GetSystemMetrics(0x4)
+        hwnd = ctypes.windll.user32.FindWindowW(None, title)
+        update_thread = threading.Thread(target = self._update, args = (hwnd, ctypes.windll.user32.GetWindowDC(hwnd)))
         update_thread.daemon = True
         update_thread.start()
     
     # Anyone knows how to avoid flicker?
     def _update(self, hwnd, dc):
         while True:
-            win32gui.SetBkMode(dc, win32con.TRANSPARENT)
+            ctypes.windll.gdi32.SetBkMode(dc, 0x1)
             for line in self.lines.copy().values():
-                win32gui.MoveToEx(dc, line[0] + self.SM_CYBORDER, line[1] + self.SM_CYCAPTION)
-                win32gui.LineTo(dc, line[2] + self.SM_CYBORDER, line[3] + self.SM_CYCAPTION)
+                ctypes.windll.gdi32.MoveToEx(dc, line[0] + self.SM_CYBORDER, line[1] + self.SM_CYCAPTION)
+                ctypes.windll.gdi32.LineTo(dc, line[2] + self.SM_CYBORDER, line[3] + self.SM_CYCAPTION)
             for rectangle in self.rectangles.copy().values():
                 if rectangle[4]:
-                    brush = win32gui.CreateSolidBrush(rectangle[4])
-                    win32gui.SelectObject(dc, brush)
+                    brush = ctypes.windll.gdi32.CreateSolidBrush(rectangle[4])
+                    ctypes.windll.gdi32.SelectObject(dc, brush)
                 else:
-                    win32gui.SelectObject(dc, win32gui.GetStockObject(win32con.NULL_BRUSH))
-                win32gui.Rectangle(dc, rectangle[0] + self.SM_CYBORDER, rectangle[1] + self.SM_CYCAPTION, rectangle[2] + self.SM_CYBORDER, rectangle[3] + self.SM_CYCAPTION)
+                    ctypes.windll.gdi32.SelectObject(dc, ctypes.windll.gdi32.GetStockObject(0x5))
+                ctypes.windll.gdi32.Rectangle(dc, rectangle[0] + self.SM_CYBORDER, rectangle[1] + self.SM_CYCAPTION, rectangle[2] + self.SM_CYBORDER, rectangle[3] + self.SM_CYCAPTION)
                 if rectangle[4]:
-                    win32gui.DeleteObject(brush)
+                    ctypes.windll.gdi32.DeleteObject(brush)
             for text in self.texts.copy().values():
-                win32gui.SetTextColor(dc, text[3])
-                win32gui.ExtTextOut(dc, text[0] + self.SM_CYBORDER, text[1] + self.SM_CYCAPTION, 0x2, (0, 0, 0, 0), text[2])
+                ctypes.windll.gdi32.SetTextColor(dc, text[3])
+                ctypes.windll.gdi32.ExtTextOut(dc, text[0] + self.SM_CYBORDER, text[1] + self.SM_CYCAPTION, 0x2, (0, 0, 0, 0), text[2])
     
     def draw_line(self, id, x1, y1, x2, y2):
         self.lines[str(id)] = [int(x1), int(y1), int(x2), int(y2)]
@@ -229,7 +230,7 @@ class ScreenDrawer:
     def draw_rectangle(self, id, x1, y1, x2, y2, color = None):
         if color and color == (0, 0, 0):
             color = (1, 1, 1)
-        self.rectangles[str(id)] = [int(x1), int(y1), int(x2), int(y2), None if not color else win32api.RGB(int(color[0]), int(color[1]), int(color[2]))]
+        self.rectangles[str(id)] = [int(x1), int(y1), int(x2), int(y2), None if not color else ctypes.wintypes.RGB(int(color[0]), int(color[1]), int(color[2]))]
     
     def draw_text(self, id, x, y, text, color = (255, 255, 255)):
-        self.texts[str(id)] = [int(x), int(y), str(text), win32api.RGB(int(color[0]), int(color[1]), int(color[2]))]
+        self.texts[str(id)] = [int(x), int(y), str(text), ctypes.wintypes.RGB(int(color[0]), int(color[1]), int(color[2]))]

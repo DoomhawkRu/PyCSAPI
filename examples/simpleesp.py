@@ -27,8 +27,8 @@ if __name__ == '__main__':
                     entity_head = entity.get_position()
                     entity_top = [entity_head[0], entity_head[1], entity_head[2] + 10]
                     entity_foot = entity.get_origin()
-                    vHead = util.world_to_screen(entity_top, api.get_view_matrix(), constant.PROCESS_TITLE)
-                    vFoot = util.world_to_screen(entity_foot, api.get_view_matrix(), constant.PROCESS_TITLE)
+                    vHead = api.world_to_screen(entity_top)
+                    vFoot = api.world_to_screen(entity_foot)
                     health = entity.get_health()
                     if vHead and vFoot:
                         h = abs(vFoot[1] - vHead[1])
