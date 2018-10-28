@@ -45,9 +45,6 @@ def distance_to_angle(distance, punch = (0, 0)):
     pitch, yaw = normalize_angles(pitch, yaw)
     return (pitch, yaw)
 
-def dot_square(distance):
-    return math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])
-
 def get_client_size(title):
     window_data = get_window(title)
     return (window_data[2] - window_data[0], window_data[3] - window_data[1])

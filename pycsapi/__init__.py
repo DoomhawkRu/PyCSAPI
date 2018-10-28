@@ -8,7 +8,9 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
+import ctypes
 import json
+import time
 import urllib.request
 try:
     from pycsapi import constant
@@ -23,13 +25,14 @@ class PyCSAPI:
     def __init__(self):
         self.game = win32util.get_process(constant.PROCESS_NAME)
         if not self.game:
-            raise Exception('Process ' + constant.PROCESS_NAME + ' is not found!')
+            raise Exception({'id': 1, 'message': 'Process ' + constant.PROCESS_NAME + ' is not found!'})
         self.client = win32util.get_module_offset(win32util.get_module(self.game, constant.CLIENT_DLL))
         self.engine = win32util.get_module_offset(win32util.get_module(self.game, constant.ENGINE_DLL))
         if not self.client or not self.engine:
-            raise Exception('Unable to load required modules!')
+            raise Exception({'id': 2, 'message': 'Unable to load required modules!'})
         self.offset = self.load_offsets()
         self.player = Player(self)
+        self.dwClientCMD = win32util.find_pattern(self.game, constant.ENGINE_DLL, [0x55, 0x8B, 0xEC, 0x8B, 0x0D, -0x01, -0x01, -0x01, -0x01, 0x81, 0xF9, -0x01, -0x01, -0x01, -0x01, 0x75, 0x0C, 0xA1, -0x01, -0x01, -0x01, -0x01, 0x35, -0x01, -0x01, -0x01, -0x01, 0xEB, 0x05, 0x8B, 0x01, 0xFF, 0x50, 0x34, 0x50, 0xA1], True)
     
     
     def _get_engine_pointer(self):
@@ -49,6 +52,13 @@ class PyCSAPI:
     
     def is_sending_packets(self):
         return bool(win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwbSendPackets'], 'b'))
+    
+    def execute_command(self, command):
+        if not self.get_player().is_in_game() or not self.dwClientCMD:
+            return False
+        win32util.write_in_thread(self.game, self.dwClientCMD, str(command), 's', len(command))
+        time.sleep(.006)
+        return True
     
     def get_bsp_file(self):
         game_dir = self.get_game_dir()
@@ -110,7 +120,7 @@ class PyCSAPI:
     
     def get_view_matrix(self):
         matrix = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        if not self.get_player().is_in_game() or not self.get_player().is_alive():
+        if not self.get_player().is_alive():
             return matrix
         for row in range(4):
             for column in range(4):
@@ -151,7 +161,7 @@ class Entity:
     
     def get_collision(self):
         x_min, y_min, z_min, x_max, y_max, z_max = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-        if not self.player.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return ((x_min, y_min, z_min), (x_max, y_max, z_max))
         x_min = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MIN, 'f')
         y_min = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_Collision'] + constant.VEC_MIN + constant.TYPE_FLOAT_SIZE, 'f')
@@ -185,7 +195,7 @@ class Entity:
     
     def get_origin(self):
         x, y, z = 0.0, 0.0, 0.0
-        if not self.player.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return (x, y, z)
         x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'], 'f')
         y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE, 'f')
@@ -194,7 +204,7 @@ class Entity:
     
     def get_position(self, bone_id = constant.HITBOX_ID_HEAD, player = False):
         x, y, z = 0.0, 0.0, 0.0
-        if not self.player.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return (x, y, z)
         if player:
             x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'], 'f')
@@ -209,14 +219,14 @@ class Entity:
     
     def get_punch(self):
         x, y = 0.0, 0.0
-        if not self.player.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return (x, y)
         x = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_aimPunchAngle'], 'f')
         y = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_aimPunchAngle'] + constant.TYPE_FLOAT_SIZE, 'f')
         return (x, y)
     
     def get_shots_fired(self):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_alive():
             return 0
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_iShotsFired'], 'i')
     
@@ -229,14 +239,14 @@ class Entity:
     
     def get_view_angle(self):
         x, y = 0.0, 0.0
-        if not self.player.is_in_game() or not self.player.is_alive():
+        if not self.player.is_alive():
             return (x, y)
         x = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'], 'f')
         y = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + constant.TYPE_FLOAT_SIZE, 'f')
         return (x, y)
     
     def get_weapon(self):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_player() or not self.is_alive():
             return 0
         active_weapon = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_hActiveWeapon'], 'i') & 0xFFF
         entity = win32util.read_memory(self.game, self.client + self.offset['signatures']['dwEntityList'] + ((active_weapon - 1) * constant.ENTITY_SIZE), 'i')
@@ -246,12 +256,12 @@ class Entity:
         return self.player.is_in_game() and bool(self.player.get_health()) and not bool(win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'i'))
     
     def is_bspotted(self):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_player() or not self.is_alive():
             return False
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], 'b') == constant.STATE_SPOTTED
     
     def is_dormant(self):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_player() or not self.is_alive():
             return False
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bGunGameImmunity'], 'b') == constant.STATE_DORMANT
     
@@ -259,18 +269,18 @@ class Entity:
         return self.player.is_in_game() and (self.get_team_id() == constant.TEAM_ID_T or self.get_team_id() == constant.TEAM_ID_CT)
     
     def is_scoped(self):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_player() or not self.is_alive():
             return False
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bIsScoped'], 'b') == constant.STATE_SCOPED
     
     def set_bspotted(self, status = True):
-        if not self.player.is_in_game() or not self.is_player() or not self.is_alive():
+        if not self.is_player() or not self.is_alive():
             return False
         win32util.write_memory(self.game, self._get_offset() + self.offset['netvars']['m_bSpotted'], constant.STATE_SPOTTED if status else constant.STATE_NOT_SPOTTED, 'b')
         return True
     
     def set_glow(self, color = (255, 255, 255, 255)):
-        if not self.player.is_in_game() or not self.player.is_alive() or not self.player.get_team_id():
+        if not self.player.is_alive() or not self.player.get_team_id():
             return False
         if len(color) == 3:
             color = (color[0], color[1], color[2], 255)
@@ -310,7 +320,7 @@ class Player:
     
     
     def get_crosshair_entity(self):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return None
         id = win32util.read_memory(self.game, self._get_local_player() + self.offset['netvars']['m_iCrosshairId'], 'i')
         if not id:
@@ -318,7 +328,7 @@ class Player:
         return Entity(self.pycsapi, self, id)
     
     def get_distance_to(self, entity, bone_id = constant.HITBOX_ID_HEAD):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return
         entity_pos = entity.get_position(bone_id)
         self_pos = self.get_position()
@@ -361,7 +371,7 @@ class Player:
         return win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_State'], 'i') == constant.STATE_IN_GAME_CONNECTED
     
     def is_on_ground(self):
-        return self.is_in_game() and self.is_alive() and self.get_team_id() > 1 and bool(self._get_flags() & (1 << 0))
+        return self.is_alive() and self.get_team_id() > 1 and bool(self._get_flags() & (1 << 0))
     
     def is_scoped(self):
         return self.get_entity().is_scoped()
@@ -372,56 +382,75 @@ class Player:
         return self.bsp.is_visible(self.get_position(), entity.get_position())
     
     def is_visible_fov(self, entity):
-        if not self.is_in_game() or not self.is_alive():
-            return
+        if not self.is_alive():
+            return False
         mask = win32util.read_memory(self.game, entity._get_offset() + self.offset['netvars']['m_bSpottedByMask'], 'i')
         base = win32util.read_memory(self.game, self._get_local_player() + 0x64, 'i') - 1
         return (mask & (1 << base)) > 0
     
+    def reload(self):
+        if not self.is_alive():
+            return False
+        self.pycsapi.execute_command('+reload')
+        time.sleep(.006)
+        self.pycsapi.execute_command('-reload')
+        return True
+    
+    def send_chat(self, message, only_team = False):
+        if not self.is_in_game():
+            return False
+        return self.pycsapi.execute_command(('say' if not only_team else 'say_team') + ' ' + str(message))
+    
     def set_backward(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceBackward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
         return True
     
+    def set_duck(self, status = True):
+        if not self.is_alive():
+            return False
+        self.pycsapi.execute_command(('+' if status else '-') + 'duck')
+        return True
+    
     def set_flash_alpha(self, value):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self._get_local_player() + self.offset['netvars']['m_flFlashMaxAlpha'], float(value), 'f')
         return True
     
     def set_forward(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceForward'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
         return True
     
     def set_left(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceLeft'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
         return True
     
     def set_jump(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceJump'], constant.STATE_JUMPING_ENABLE if status else constant.STATE_JUMPING_DISABLE, 'i')
         return True
     
     def set_right(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
         return True
     
     def set_shoot(self, status = True):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceAttack'], constant.STATE_SHOOTING_ENABLE if status else constant.STATE_SHOOTING_DISABLE, 'i')
         return True
     
     def set_view_angle(self, x, y):
-        if not self.is_in_game() or not self.is_alive():
+        if not self.is_alive():
             return False
         win32util.write_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'], x, 'f')
         win32util.write_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_ViewAngles'] + constant.TYPE_FLOAT_SIZE, y, 'f')

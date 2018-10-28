@@ -34,19 +34,12 @@ def find_pattern(pid, name, pattern, full_address = False):
     if not module or not pattern:
         return False
     data = read_memory(pid, module, None, get_module_size(pid, name))
-    return __get_subindex(data, pattern) + (module if full_address else 0)
+    subindex = __get_subindex(data, pattern)
+    return subindex + ((module if full_address else 0) if subindex else 0)
 
 def get_process(name):
-    count = 32
-    while True:
-        pids = (ctypes.wintypes.DWORD * count)()
-        cb = ctypes.sizeof(pids)
-        bytes_returned = ctypes.wintypes.DWORD()
-        if ctypes.windll.psapi.EnumProcesses(ctypes.byref(pids), cb, ctypes.byref(bytes_returned)):
-            if bytes_returned.value < cb:
-                break
-            else:
-                count *= 2
+    pids = (ctypes.wintypes.DWORD * 256)()
+    ctypes.windll.psapi.EnumProcesses(ctypes.byref(pids), ctypes.sizeof(pids), ctypes.byref(ctypes.wintypes.DWORD()))
     for pid in pids:
         hwnd = ctypes.windll.kernel32.OpenProcess(0x400, False, pid)
         if hwnd:
@@ -107,3 +100,12 @@ def write_memory(pid, address, data, type, size = None):
     else:
         ctypes.windll.kernel32.WriteProcessMemory(process, address, bytes([data]), size, ctypes.byref(ctypes.c_ulong(0)))
     ctypes.windll.kernel32.CloseHandle(process)
+
+def write_in_thread(pid, address, data, type, size):
+    process = ctypes.windll.kernel32.OpenProcess(0x1F0FFF, 0, pid)
+    vCommand = ctypes.windll.kernel32.VirtualAllocEx(process, None, size + (1 if data is str else 0), 8192 | 4096, 4)
+    ctypes.windll.kernel32.WriteProcessMemory(process, vCommand, bytes(data.encode()) if isinstance(data, str) else struct.pack(type, data), size, None)
+    hThread = ctypes.windll.kernel32.CreateRemoteThread(process, None, None, address, vCommand, None, None)
+    ctypes.windll.kernel32.WaitForSingleObject(hThread, -1)
+    ctypes.windll.kernel32.CloseHandle(process)
+    ctypes.windll.kernel32.VirtualFreeEx(process, vCommand, size + (1 if data is str else 0), 32768)
