@@ -88,9 +88,10 @@ def read_memory(pid, address, type, size = None):
     ctypes.windll.kernel32.ReadProcessMemory(process, address, buffer, size, ctypes.byref(ctypes.c_ulonglong(0)))
     ctypes.windll.kernel32.CloseHandle(process)
     if type:
-        return struct.unpack(type, buffer)[0]
+        result = struct.unpack(type, buffer)[0]
     else:
-        return struct.unpack('b' * size, buffer)
+        result = struct.unpack('{}b'.format(size), buffer)
+    return result
 
 def write_memory(pid, address, data, type, size = None):
     type = None if size else type

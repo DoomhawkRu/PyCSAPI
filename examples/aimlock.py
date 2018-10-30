@@ -24,21 +24,15 @@ if __name__ == '__main__':
     print('Press Page Down to decrease aim fov')
     sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
     pressed = False
-    iter = 0
     while True:
-        if (not pressed or iter >= 20) and util.is_key_pressed(constant.VK_PRIOR) and aimfov < 70:
+        if not pressed and util.is_key_pressed(constant.VK_PRIOR) and aimfov < 70:
             aimfov += 0.5
             sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
             pressed = True
-        elif (not pressed or iter >= 20) and util.is_key_pressed(constant.VK_NEXT) and aimfov > 0:
+        elif not pressed and util.is_key_pressed(constant.VK_NEXT) and aimfov > 0:
             aimfov -= 0.5
             sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
             pressed = True
-        if not util.is_key_pressed(constant.VK_PRIOR) and not util.is_key_pressed(constant.VK_NEXT):
-            pressed = False
-            iter = 0
-        if pressed:
-            iter += 1
         if player.is_in_game() and player.is_alive():
             for entity in api.get_players():
                 if entity.get_team_id() != player.get_team_id() and not entity.is_dormant() and player.is_visible(entity):

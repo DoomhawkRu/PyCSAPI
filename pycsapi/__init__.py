@@ -31,24 +31,14 @@ class PyCSAPI:
         if not self.client or not self.engine:
             raise Exception({'id': 2, 'message': 'Unable to load required modules!'})
         self.offset = self.load_offsets()
-        self.player = Player(self)
         self.dwClientCMD = win32util.find_pattern(self.game, constant.ENGINE_DLL, [0x55, 0x8B, 0xEC, 0x8B, 0x0D, -0x01, -0x01, -0x01, -0x01, 0x81, 0xF9, -0x01, -0x01, -0x01, -0x01, 0x75, 0x0C, 0xA1, -0x01, -0x01, -0x01, -0x01, 0x35, -0x01, -0x01, -0x01, -0x01, 0xEB, 0x05, 0x8B, 0x01, 0xFF, 0x50, 0x34, 0x50, 0xA1], True)
+        self.player = Player(self)
     
-    
-    def _get_engine_pointer(self):
-        return win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwClientState'], 'i')
-    
-    def _get_flags(self):
-        return win32util.read_memory(self.game, self._get_local_player() + self.offset['netvars']['m_fFlags'], 'i')
-    
-    def _get_local_player(self):
-        return win32util.read_memory(self.game, self.client + self.offset['signatures']['dwLocalPlayer'], 'i')
-    
-    def _get_radar(self):
-        return win32util.read_memory(self.game, self.client + self.offset['signatures']['dwRadarBase'], 'i')
-    
-    def _get_radar_pointer(self):
-        return win32util.read_memory(self.game, self._get_radar() + constant.RADAR_POINTER_OFFSET, 'i')
+    _get_engine_pointer = lambda self: win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwClientState'], 'i')
+    _get_flags = lambda self: win32util.read_memory(self.game, self._get_local_player() + self.offset['netvars']['m_fFlags'], 'i')
+    _get_local_player = lambda self: win32util.read_memory(self.game, self.client + self.offset['signatures']['dwLocalPlayer'], 'i')
+    _get_radar = lambda self: win32util.read_memory(self.game, self.client + self.offset['signatures']['dwRadarBase'], 'i')
+    _get_radar_pointer = lambda self: win32util.read_memory(self.game, self._get_radar() + constant.RADAR_POINTER_OFFSET, 'i')
     
     def is_sending_packets(self):
         return bool(win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwbSendPackets'], 'b'))
@@ -65,7 +55,7 @@ class PyCSAPI:
         map_dir = self.get_map_directory()
         if not game_dir or not map_dir:
             return ''
-        return game_dir + '\\' + map_dir
+        return '{}\\{}'.format(game_dir, map_dir)
     
     def get_game_dir(self):
         name = ''
@@ -253,7 +243,7 @@ class Entity:
         return win32util.read_memory(self.game, entity + self.offset['netvars']['m_iItemDefinitionIndex'], 'i')
 
     def is_alive(self):
-        return self.player.is_in_game() and bool(self.player.get_health()) and not bool(win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'i'))
+        return self.player.is_in_game() and 0 < self.player.get_health() <= 100 and not win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'b')
     
     def is_bspotted(self):
         if not self.is_player() or not self.is_alive():
@@ -280,7 +270,7 @@ class Entity:
         return True
     
     def set_glow(self, color = (255, 255, 255, 255)):
-        if not self.player.is_alive() or not self.player.get_team_id():
+        if not self.player.is_alive() or not self.is_alive() or not self.player.get_team_id():
             return False
         if len(color) == 3:
             color = (color[0], color[1], color[2], 255)
