@@ -52,5 +52,6 @@ SOFTWARE.
 - [ReactiioN](https://www.unknowncheats.me/forum/members/264622.html)
 - [Killstreak](https://www.unknowncheats.me/forum/members/242212.html)
 - [iamchets](https://www.unknowncheats.me/forum/members/500667.html)
+- [SzwagiAQN](https://www.unknowncheats.me/forum/members/1479962.html)
 
 If you have any questions, please feel free to contact me via email: **admin@doomhawk.org**

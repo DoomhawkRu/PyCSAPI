@@ -11,9 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 import pycsapi
 import time
 
-# Make sure that you run CS:GO before running this script, otherwise you will get an error
 if __name__ == '__main__':
-    api = pycsapi.PyCSAPI()
+    api = pycsapi.load()
     player = api.get_player()
     while True:
         if player.is_in_game() and player.is_alive():

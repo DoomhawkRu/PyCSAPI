@@ -13,9 +13,8 @@ from pycsapi import util
 import pycsapi
 import time
 
-# Make sure that you run CS:GO before running this script, otherwise you will get an error
 if __name__ == '__main__':
-    api = pycsapi.PyCSAPI()
+    api = pycsapi.load()
     player = api.get_player()
     jump = False
     while True:

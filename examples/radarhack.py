@@ -8,7 +8,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-from pycsapi import util
 import pycsapi
 import time
 
@@ -19,6 +18,5 @@ if __name__ == '__main__':
         if player.is_in_game() and player.is_alive():
             for entity in api.get_players():
                 if entity.get_team_id() != player.get_team_id():
-                    if not entity.is_dormant():
-                        entity.set_glow(util.health_to_rgb(entity.get_health()))
-        time.sleep(1 / 256)
+                    entity.set_bspotted(True)
+        time.sleep(1)

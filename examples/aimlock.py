@@ -10,29 +10,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 from pycsapi import constant
 from pycsapi import util
-import math
 import pycsapi
 import time
-import sys
 
-# Make sure that you run CS:GO before running this script, otherwise you will get an error
 if __name__ == '__main__':
-    aimfov = 5.0
-    api = pycsapi.PyCSAPI()
+    aimfov = 5
+    api = pycsapi.load()
     player = api.get_player()
-    print('Press Page Up to increase aim fov')
-    print('Press Page Down to decrease aim fov')
-    sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
-    pressed = False
     while True:
-        if not pressed and util.is_key_pressed(constant.VK_PRIOR) and aimfov < 70:
-            aimfov += 0.5
-            sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
-            pressed = True
-        elif not pressed and util.is_key_pressed(constant.VK_NEXT) and aimfov > 0:
-            aimfov -= 0.5
-            sys.stdout.write('\rCurrent aim fov: ' + str(aimfov) + ' degrees   ')
-            pressed = True
         if player.is_in_game() and player.is_alive():
             for entity in api.get_players():
                 if entity.get_team_id() != player.get_team_id() and not entity.is_dormant() and player.is_visible(entity):
