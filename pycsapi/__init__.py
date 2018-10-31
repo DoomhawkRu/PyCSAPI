@@ -38,6 +38,8 @@ class PyCSAPI:
         if not self.client or not self.engine:
             raise Exception({'id': 2, 'message': 'Unable to load required modules!'})
         self.offset = self.load_offsets()
+        if not self.offset:
+            raise Exception({'id': 3, 'message': 'Unable to load update offsets!'})
         self.dwClientCMD = win32util.find_pattern(self.game, constant.ENGINE_DLL, constant.PATTERN_DWCLIENTCMD, True)
         self.player = Player(self)
     
@@ -128,6 +130,9 @@ class PyCSAPI:
     def load_offsets(self):
         return json.loads(urllib.request.urlopen(constant.URL_OFFSETS).read().decode())
     
+    def print(self, message):
+        self.execute_command('echo {}'.format(message))
+    
     def set_sending_packets(self, status = True):
         win32util.write_memory(self.game, self.engine + self.offset['signatures']['dwbSendPackets'], constant.STATE_SENDING_PACKETS_ENABLE if status else constant.STATE_SENDING_PACKETS_DISABLE, 'b')
         return True
@@ -190,7 +195,7 @@ class Entity:
     
     def get_name(self):
         name = ''
-        if not self.player.is_in_game() or not self.player.get_team_id() or not self.is_player():
+        if not self.player.is_in_game() or not self.is_player():
             return name
         radar_pointer = self._get_radar_pointer()
         for num in range(constant.NAME_SIZE):
@@ -438,14 +443,14 @@ class Player:
         if not self.is_alive():
             return False
         self.pycsapi.execute_command('+reload')
-        time.sleep(.006)
+        time.sleep(.01)
         self.pycsapi.execute_command('-reload')
         return True
     
     def send_chat(self, message, only_team = False):
         if not self.is_in_game():
             return False
-        return self.pycsapi.execute_command(('say' if not only_team else 'say_team') + ' ' + str(message))
+        return self.pycsapi.execute_command('{} {}'.format('say' if not only_team else 'say_team', message))
     
     def set_backward(self, status = True):
         if not self.is_alive():
@@ -456,7 +461,7 @@ class Player:
     def set_duck(self, status = True):
         if not self.is_alive():
             return False
-        self.pycsapi.execute_command(('+' if status else '-') + 'duck')
+        self.pycsapi.execute_command('+duck' if status else '-duck')
         return True
     
     def set_flash_alpha(self, value):
@@ -487,6 +492,12 @@ class Player:
         if not self.is_alive():
             return False
         win32util.write_memory(self.game, self.client + self.offset['signatures']['dwForceRight'], constant.STATE_MOVING_ENABLE if status else constant.STATE_MOVING_DISABLE, 'i')
+        return True
+    
+    def set_shift(self, status = True):
+        if not self.is_alive():
+            return False
+        self.pycsapi.execute_command('+speed' if status else '-speed')
         return True
     
     def set_shoot(self, status = True):

@@ -13,8 +13,10 @@ import ctypes.wintypes
 import math
 import threading
 try:
+    from pycsapi import constant
     from pycsapi import structures
 except:
+    import constant
     import structures
 
 def calc_distance(current_x, current_y, new_x, new_y):
@@ -40,6 +42,8 @@ def check_angles(pitch, yaw):
     return True
 
 def distance_to_angle(distance, punch = (0, 0)):
+    if not distance:
+        return (0, 0)
     yaw = (math.atan2(distance[1], distance[0]) * 180 / math.pi) - (punch[1] * 2)
     pitch = (math.atan2(-distance[2], math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])) * 180 / math.pi) - (punch[0] * 2)
     pitch, yaw = normalize_angles(pitch, yaw)
@@ -48,6 +52,37 @@ def distance_to_angle(distance, punch = (0, 0)):
 def get_client_size(title):
     window_data = get_window(title)
     return (window_data[2] - window_data[0], window_data[3] - window_data[1])
+
+def get_hitgroup_damage_mult(hitgroup):
+    if hitgroup == constant.HITGROUP_GENERIC:
+        return 1.0
+    if hitgroup == constant.HITGROUP_HEAD:
+        return 4.0
+    if hitgroup == constant.HITGROUP_CHEAT:
+        return 1.0
+    if hitgroup == constant.HITGROUP_STOMACH:
+        return 1.25
+    if hitgroup == constant.HITGROUP_LEFTARM:
+        return 1.0
+    if hitgroup == constant.HITGROUP_RIGHTARM:
+        return 1.0
+    if hitgroup == constant.HITGROUP_LEFTLEG:
+        return 0.75
+    if hitgroup == constant.HITGROUP_RIGHTLEG:
+        return 0.75
+    if hitgroup == constant.HITGROUP_GEAR:
+        return 1.0
+    return 1.0
+
+def get_scale_damage(hitgroup, entity, weapon_armor_ratio, current_damage):
+    current_damage *= get_hitgroup_damage_mult(hitgroup)
+    if entity.get_armor() > 0:
+        if hitgroup == constant.HITGROUP_HEAD:
+            if entity.is_has_helmet():
+                current_damage *= weapon_armor_ratio * 0.5
+        else:
+            current_damage *= weapon_armor_ratio * 0.5
+    return current_damage
 
 def get_window(title):
     rect = ctypes.wintypes.RECT()
@@ -177,9 +212,9 @@ class BSPParsing:
         vDirection = vEnd - vStart
         vPoint = vStart
         iStepCount = int(vDirection.length())
-        vDirection /= iStepCount
         if not iStepCount:
             return False
+        vDirection /= iStepCount
         while iStepCount:
             vPoint = vPoint + vDirection
             pLeaf = self.get_leaf_from_point(vPoint)
