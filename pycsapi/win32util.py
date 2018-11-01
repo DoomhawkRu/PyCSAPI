@@ -33,7 +33,7 @@ def find_pattern(pid, name, pattern, full_address = False):
     module = get_module_offset(get_module(pid, name))
     if not module or not pattern:
         return False
-    data = read_memory(pid, module, None, get_module_size(pid, name))
+    data = read_memory(pid, module, 'b', get_module_size(pid, name))
     subindex = __get_subindex(data, pattern)
     return subindex + ((module if full_address else 0) if subindex else 0)
 
@@ -81,16 +81,16 @@ def get_module_offset(module):
     return ctypes.addressof(module.contents)
 
 def read_memory(pid, address, type, size = None):
-    type = None if size else type
+    advanced = True if size else False
     size = size if size else (4 if (type == 'i' or type == 'f') else 1)
     buffer = (ctypes.c_byte * size)()
     process = ctypes.windll.kernel32.OpenProcess(0x1F0FFF, 0, pid)
     ctypes.windll.kernel32.ReadProcessMemory(process, address, buffer, size, ctypes.byref(ctypes.c_ulonglong(0)))
     ctypes.windll.kernel32.CloseHandle(process)
-    if type:
+    if not advanced:
         result = struct.unpack(type, buffer)[0]
     else:
-        result = struct.unpack('{}b'.format(size), buffer)
+        result = struct.unpack('{}{}'.format(size, type), buffer)
     return result
 
 def write_memory(pid, address, data, type, size = None):

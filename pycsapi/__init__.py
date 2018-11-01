@@ -60,6 +60,16 @@ class PyCSAPI:
             time.sleep(.006)
         return True
     
+    def find_entities(self, in_range = 1024, func = True):
+        entities = []
+        if not self.get_player().is_in_game():
+            return entities
+        for entity in range(in_range):
+            e = Entity(self, self.get_player(), entity)
+            if (isinstance(func, bool) and func) or func(e):
+                entities.append(e)
+        return entities
+    
     def get_bsp_file(self):
         game_dir = self.get_game_dir()
         map_dir = self.get_map_directory()
@@ -71,33 +81,30 @@ class PyCSAPI:
         name = ''
         if not self.get_player().is_in_game():
             return name
-        for i in range(constant.GAME_DIR_SIZE):
-            character = win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwGameDir'] + i, 'c')
-            if character == b'\x00':
-                break
-            name += character.decode()
+        for char in win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwGameDir'], 'c', constant.GAME_DIR_SIZE):
+            if char == b'\x00':
+                return name
+            name += char.decode()
         return name
     
     def get_map(self):
         name = ''
         if not self.get_player().is_in_game():
             return name
-        for i in range(constant.MAP_NAME_SIZE):
-            character = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_Map'] + i, 'c')
-            if character == b'\x00':
-                break
-            name += character.decode()
+        for char in win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_Map'], 'c', constant.MAP_NAME_SIZE):
+            if char == b'\x00':
+                return name
+            name += char.decode()
         return name
     
     def get_map_directory(self):
         name = ''
         if not self.get_player().is_in_game():
             return name
-        for i in range(constant.MAP_DIRECTORY_SIZE):
-            character = win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_MapDirectory'] + i, 'c')
-            if character == b'\x00':
-                break
-            name += character.decode()
+        for char in win32util.read_memory(self.game, self._get_engine_pointer() + self.offset['signatures']['dwClientState_MapDirectory'], 'c', constant.MAP_DIRECTORY_SIZE):
+            if char == b'\x00':
+                return name
+            name += char.decode()
         return name
     
     def get_max_players(self):
@@ -108,13 +115,13 @@ class PyCSAPI:
     def get_player(self):
         return self.player
     
-    def get_players(self, max_players = 64):
+    def get_players(self, max_players = 64, func = True):
         entities = []
         if not self.get_player().is_in_game():
             return entities
         for entity in range(max_players):
             e = Entity(self, self.get_player(), entity)
-            if e.is_player():
+            if e.is_player() and ((isinstance(func, bool) and func) or func(e)):
                 entities.append(e)
         return entities
     
@@ -139,7 +146,7 @@ class PyCSAPI:
     
     def world_to_screen(self, coords):
         return util.world_to_screen(coords, self.get_view_matrix(), constant.PROCESS_TITLE)
-        
+
 class Entity:
     def __init__(self, pycsapi, player, id):
         self.pycsapi = pycsapi
@@ -242,6 +249,11 @@ class Entity:
             return 0
         return win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_iShotsFired'], 'i')
     
+    def get_spectator_target(self):
+        if not self.player.is_in_game() or self.is_alive():
+            return False
+        return Entity(self.pycsapi, self.player, win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_hObserverTarget'], 'i') & 0xFFF)
+    
     def get_team_id(self):
         if self.player.is_in_game():
             state = win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_iTeamNum'], 'i')
@@ -274,7 +286,7 @@ class Entity:
         return next_attack <= server_time
     
     def is_alive(self):
-        return self.player.is_in_game() and 0 < self.player.get_health() <= 100 and not win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'b')
+        return self.player.is_in_game() and 0 < self.get_health() <= 100 and not win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'b')
     
     def is_bspotted(self):
         if not self.is_player() or not self.is_alive():
@@ -297,7 +309,7 @@ class Entity:
         return bool(win32util.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bHasHelmet'], 'b'))
     
     def is_player(self):
-        return self.player.is_in_game() and (self.get_team_id() == constant.TEAM_ID_T or self.get_team_id() == constant.TEAM_ID_CT) and self._get_class_id() == constant.CLASS_CCSPLAYER
+        return self.player.is_in_game() and self._get_class_id() == constant.CLASS_CCSPLAYER
     
     def is_scoped(self):
         if not self.is_player() or not self.is_alive():
@@ -390,6 +402,9 @@ class Player:
     
     def get_shots_fired(self):
         return self.get_entity().get_shots_fired()
+    
+    def get_spectator_target(self):
+        return self.get_entity().get_spectator_target()
     
     def get_team_id(self):
         return self.get_entity().get_team_id()
