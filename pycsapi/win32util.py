@@ -99,7 +99,7 @@ def write_memory(pid, address, data, type, size = None):
     if type:
         ctypes.windll.kernel32.WriteProcessMemory(process, address, struct.pack(type, data) if type == 'f' or type == 'i' else (bytes([data]) if type == 'b' else chr(data)), (4 if (type == 'i' or type == 'f') else 1), ctypes.byref(ctypes.c_ulong(0)))
     else:
-        ctypes.windll.kernel32.WriteProcessMemory(process, address, bytes([data]), size, ctypes.byref(ctypes.c_ulong(0)))
+        ctypes.windll.kernel32.WriteProcessMemory(process, address, bytes(data.encode()), size, ctypes.byref(ctypes.c_ulong(0)))
     ctypes.windll.kernel32.CloseHandle(process)
 
 def write_in_thread(pid, address, data, type, size):

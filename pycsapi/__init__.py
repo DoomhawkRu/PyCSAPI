@@ -12,6 +12,7 @@ import ctypes
 import json
 import time
 import urllib.request
+
 try:
     from pycsapi import constant
     from pycsapi import util
@@ -28,6 +29,72 @@ def load(show_error = True):
         if show_error:
             ctypes.windll.user32.MessageBoxW(0, e.args[0]['message'], 'PyCSAPI', 16)
 
+class Convar:
+    def __init__(self, pycsapi, address):
+        self.pycsapi = pycsapi
+        self.address = address
+    
+    def get_name(self):
+        convar_name_entry = win32util.read_memory(self.pycsapi.game, self.address + 0xc, 'i')
+        convar_name = ''
+        for i in range(constant.CONVAR_NAME_SIZE):
+            char = win32util.read_memory(self.pycsapi.game, convar_name_entry + i, 'c')
+            if char == b'\x00':
+                break
+            convar_name += char.decode()
+        return convar_name
+    
+    def get_size(self):
+        return win32util.read_memory(self.pycsapi.game, self.address + 0x28, 'i')
+    
+    def get_float(self):
+        return win32util.read_memory(self.pycsapi.game, self.address + 0x2C, 'f') - self.address
+    
+    def set_float(self, value):
+        return win32util.write_memory(self.pycsapi.game, self.address + 0x2C, value + self.address, 'f')
+    
+    def get_int(self):
+        return win32util.read_memory(self.pycsapi.game, self.address + 0x30, 'i') - self.address
+    
+    def set_int(self, value):
+        return win32util.write_memory(self.pycsapi.game, self.address + 0x30, value + self.address, 'i')
+    
+    def get_string(self):
+        convar_string_entry = win32util.read_memory(self.pycsapi.game, self.address + 0x24, 'i')
+        convar_string = ''
+        for i in range(constant.CONVAR_STRING_SIZE):
+            char = win32util.read_memory(self.pycsapi.game, convar_string_entry + i, 'c')
+            if char == b'\x00':
+                break
+            convar_string += char.decode()
+        return convar_string
+    
+    def set_string(self, value):
+        convar_string_entry = win32util.read_memory(self.pycsapi.game, self.address + 0x24, 'i')
+        win32util.write_memory(self.pycsapi.game, convar_string_entry, value, 'c', len(value))
+        for i in range(len(value), constant.CONVAR_STRING_SIZE):
+            char = win32util.read_memory(self.pycsapi.game, convar_string_entry + i, 'c')
+            if char != b'\x00':
+                win32util.write_memory(self.pycsapi.game, convar_string_entry + i, 0, 'b')
+            else:
+                break
+
+class ConvarManager:
+    def __init__(self, pycsapi):
+        self.pycsapi = pycsapi
+    
+    def find_convar(self, name):
+        convar_base = win32util.find_pattern(self.pycsapi.game, constant.VSTDLIB_DLL, constant.PATTERN_CONVAR, True) + constant.PATTERN_CONVAR_OFFSET
+        convar_base_pointer = win32util.read_memory(self.pycsapi.game, convar_base, 'i')
+        short_cuts = win32util.read_memory(self.pycsapi.game, convar_base_pointer + 0x34, 'i')
+        hash_map_entry = win32util.read_memory(self.pycsapi.game, short_cuts, 'i')
+        while hash_map_entry:
+            convar_address = win32util.read_memory(self.pycsapi.game, hash_map_entry + 0x4, 'i')
+            convar = Convar(self.pycsapi, convar_address)
+            if convar.get_name() == name:
+                return convar
+            hash_map_entry = win32util.read_memory(self.pycsapi.game, hash_map_entry + 0x4, 'i')
+
 class PyCSAPI:
     def __init__(self):
         self.game = win32util.get_process(constant.PROCESS_NAME)
@@ -41,6 +108,7 @@ class PyCSAPI:
         if not self.offset:
             raise Exception({'id': 3, 'message': 'Unable to load update offsets!'})
         self.dwClientCMD = win32util.find_pattern(self.game, constant.ENGINE_DLL, constant.PATTERN_DWCLIENTCMD, True)
+        self.convar_manager = ConvarManager(self)
         self.player = Player(self)
     
     _get_engine_pointer = lambda self: win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwClientState'], 'i')
@@ -164,7 +232,6 @@ class Entity:
         
         self.player = player
         self.id = id
-    
     
     def _get_class_id(self):
         vtable = win32util.read_memory(self.game, self._get_offset() + 0x08, 'i')

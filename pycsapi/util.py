@@ -12,6 +12,7 @@ import ctypes
 import ctypes.wintypes
 import math
 import threading
+
 try:
     from pycsapi import constant
     from pycsapi import structures
@@ -42,8 +43,9 @@ def check_angles(pitch, yaw):
     return True
 
 def distance_to_angle(distance, punch = (0, 0)):
+    pitch, yaw = 0, 0
     if not distance:
-        return (0, 0)
+        return (pitch, yaw)
     yaw = (math.atan2(distance[1], distance[0]) * 180 / math.pi) - (punch[1] * 2)
     pitch = (math.atan2(-distance[2], math.sqrt(distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2])) * 180 / math.pi) - (punch[0] * 2)
     pitch, yaw = normalize_angles(pitch, yaw)

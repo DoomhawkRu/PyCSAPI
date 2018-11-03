@@ -10,11 +10,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 CLIENT_DLL = 'client_panorama.dll'
 ENGINE_DLL = 'engine.dll'
+VSTDLIB_DLL = 'vstdlib.dll'
+
 PROCESS_NAME = 'csgo.exe'
 PROCESS_TITLE = 'Counter-Strike: Global Offensive'
 URL_OFFSETS = 'https://raw.githubusercontent.com/frk1/hazedumper/master/csgo.json'
 
 PATTERN_DWCLIENTCMD = [0x55, 0x8B, 0xEC, 0x8B, 0x0D, -0x01, -0x01, -0x01, -0x01, 0x81, 0xF9, -0x01, -0x01, -0x01, -0x01, 0x75, 0x0C, 0xA1, -0x01, -0x01, -0x01, -0x01, 0x35, -0x01, -0x01, -0x01, -0x01, 0xEB, 0x05, 0x8B, 0x01, 0xFF, 0x50, 0x34, 0x50, 0xA1]
+PATTERN_CONVAR = [0xE8, -0x01, -0x01, -0x01, -0x01, 0xB8, -0x01, -0x01, -0x01, -0x01]
+PATTERN_CONVAR_OFFSET = 6
 
 INTERVAL_PER_TICK = 1 / 64
 
@@ -94,6 +98,8 @@ HITBOX_HEAD_2 = (-2.5038, 2.009, -1.1021), (6.3023, 5.2965, 0.9951)
 HITBOX_SPINE4_2 = (-0.2996, -6.0027, -4.996901), (5.4998, 2.5038, 5.1039)
 
 BONE_MATRIX_SIZE = 48
+CONVAR_NAME_SIZE = 64
+CONVAR_STRING_SIZE = 256
 ENTITY_SIZE = 16
 GAME_DIR_SIZE = 96
 GLOW_INDEX_SIZE = 56

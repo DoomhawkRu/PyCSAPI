@@ -1,14 +1,14 @@
 # PyCSAPI
 
-## How to install:
-### Installing from PyPi repository:
+## Installation:
+### Installation from PyPi repository:
 1. Download and install Python 3.6.6 from the [official site](https://www.python.org) ([x86-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6.exe), [x64-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6-amd64.exe))
 2. Type the following command in the Windows console:
 ```
 pip3 install pycsapi
 ```
 
-### Installing manually from the source code:
+### Installation manually from the source code:
 1. Download and install Python 3.6.6 from the [official site](https://www.python.org) ([x86-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6.exe), [x64-installer](https://www.python.org/ftp/python/3.6.6/python-3.6.6-amd64.exe))
 2. Download and install Git from the [official site](https://git-scm.com/) ([x86/x64-installer](https://git-scm.com/download/win))
 3. Type the following commands in the Git Bash console:
