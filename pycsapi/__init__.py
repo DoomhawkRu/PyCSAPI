@@ -47,6 +47,18 @@ class Convar:
     def get_size(self):
         return win32util.read_memory(self.pycsapi.game, self.address + 0x28, 'i')
     
+    def get_flags(self):
+        return util.ConvarFlags(win32util.read_memory(self.pycsapi.game, self.address + 0x14, 'i'))
+    
+    def set_flags(self, value):
+        flag = 0
+        if isinstance(value, int):
+            flag = value
+        else:
+            flag = value.compile()
+        win32util.write_memory(self.pycsapi.game, self.address + 0x14, flag, 'i')
+        return True
+    
     def get_float(self):
         return win32util.read_memory(self.pycsapi.game, self.address + 0x2C, 'f') - self.address
     
@@ -111,11 +123,11 @@ class PyCSAPI:
         self.convar_manager = ConvarManager(self)
         self.player = Player(self)
     
-    _get_engine_pointer = lambda self: win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwClientState'], 'i')
-    _get_flags = lambda self: win32util.read_memory(self.game, self._get_local_player() + self.offset['netvars']['m_fFlags'], 'i')
-    _get_local_player = lambda self: win32util.read_memory(self.game, self.client + self.offset['signatures']['dwLocalPlayer'], 'i')
-    _get_radar = lambda self: win32util.read_memory(self.game, self.client + self.offset['signatures']['dwRadarBase'], 'i')
-    _get_radar_pointer = lambda self: win32util.read_memory(self.game, self._get_radar() + constant.RADAR_POINTER_OFFSET, 'i')
+    def _get_engine_pointer(self): return win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwClientState'], 'i')
+    def _get_flags(self): return win32util.read_memory(self.game, self._get_local_player() + self.offset['netvars']['m_fFlags'], 'i')
+    def _get_local_player(self): return win32util.read_memory(self.game, self.client + self.offset['signatures']['dwLocalPlayer'], 'i')
+    def _get_radar(self): return win32util.read_memory(self.game, self.client + self.offset['signatures']['dwRadarBase'], 'i')
+    def _get_radar_pointer(self): return win32util.read_memory(self.game, self._get_radar() + constant.RADAR_POINTER_OFFSET, 'i')
     
     def is_sending_packets(self):
         return bool(win32util.read_memory(self.game, self.engine + self.offset['signatures']['dwbSendPackets'], 'b'))
@@ -123,7 +135,7 @@ class PyCSAPI:
     def execute_command(self, command, safe = True):
         if not self.get_player().is_in_game() or not self.dwClientCMD:
             return False
-        win32util.write_in_thread(self.game, self.dwClientCMD, str(command), 's', len(command))
+        win32util.write_in_thread(self.game, self.dwClientCMD, str(command), 'c', len(command))
         if safe:
             time.sleep(.006)
         return True

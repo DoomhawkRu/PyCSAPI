@@ -128,6 +128,110 @@ def world_to_screen(_from, matrix, title):
     y = height / 2 - 0.5 * (matrix[1][0] * _from[0] + matrix[1][1] * _from[1] + matrix[1][2] * _from[2] + matrix[1][3]) * (1 / w) * height + 0.5
     return (x, y)
 
+class ConvarFlags:
+    def __init__(self, value):
+        self.FCVAR_UNREGISTERED = bool(value & constant.FCVAR_UNREGISTERED)
+        self.FCVAR_DEVELOPMENTONLY = bool(value & constant.FCVAR_DEVELOPMENTONLY)
+        self.FCVAR_GAMEDLL = bool(value & constant.FCVAR_GAMEDLL)
+        self.FCVAR_CLIENTDLL = bool(value & constant.FCVAR_CLIENTDLL)
+        self.FCVAR_HIDDEN = bool(value & constant.FCVAR_HIDDEN)
+        self.FCVAR_PROTECTED = bool(value & constant.FCVAR_PROTECTED)
+        self.FCVAR_SPONLY = bool(value & constant.FCVAR_SPONLY)
+        self.FCVAR_ARCHIVE = bool(value & constant.FCVAR_ARCHIVE)
+        self.FCVAR_NOTIFY = bool(value & constant.FCVAR_NOTIFY)
+        self.FCVAR_USERINFO = bool(value & constant.FCVAR_USERINFO)
+        self.FCVAR_PRINTABLEONLY = bool(value & constant.FCVAR_PRINTABLEONLY)
+        self.FCVAR_UNLOGGED = bool(value & constant.FCVAR_UNLOGGED)
+        self.FCVAR_NEVERASSTRING = bool(value & constant.FCVAR_NEVERASSTRING)
+        self.FCVAR_REPLICATED = bool(value & constant.FCVAR_REPLICATED)
+        self.FCVAR_CHEAT = bool(value & constant.FCVAR_CHEAT)
+        self.FCVAR_EMPTY1 = bool(value & constant.FCVAR_EMPTY1)
+        self.FCVAR_DEMO = bool(value & constant.FCVAR_DEMO)
+        self.FCVAR_DONOTRECORD = bool(value & constant.FCVAR_DONOTRECORD)
+        self.FCVAR_EMPTY2 = bool(value & constant.FCVAR_EMPTY2)
+        self.FCVAR_EMPTY3 = bool(value & constant.FCVAR_EMPTY3)
+        self.FCVAR_RELOADMATERIALS = bool(value & constant.FCVAR_RELOADMATERIALS)
+        self.FCVAR_RELOADTEXTURES = bool(value & constant.FCVAR_RELOADTEXTURES)
+        self.FCVAR_NOTCONNECTED = bool(value & constant.FCVAR_NOTCONNECTED)
+        self.FCVAR_MATERIALSYSTEMTHREAD = bool(value & constant.FCVAR_MATERIALSYSTEMTHREAD)
+        self.FCVAR_ARCHIVEXBOX = bool(value & constant.FCVAR_ARCHIVEXBOX)
+        self.FCVAR_ACCESSIBLEFROMTHREADS = bool(value & constant.FCVAR_ACCESSIBLEFROMTHREADS)
+        self.FCVAR_EMPTY4 = bool(value & constant.FCVAR_EMPTY4)
+        self.FCVAR_EMPTY5 = bool(value & constant.FCVAR_EMPTY5)
+        self.FCVAR_SERVERCANEXECUTE = bool(value & constant.FCVAR_SERVERCANEXECUTE)
+        self.FCVAR_SERVERCANNOTQUERY = bool(value & constant.FCVAR_SERVERCANNOTQUERY)
+        self.FCVAR_CLIENTCOMMANDCANEXECUTE = bool(value & constant.FCVAR_CLIENTCOMMANDCANEXECUTE)
+    
+    def compile_to_str(self):
+        str = ''
+        str += 'Unregistered = {}'.format(self.FCVAR_UNREGISTERED) + '\n'
+        str += 'DevelopmentOnly = {}'.format(self.FCVAR_DEVELOPMENTONLY) + '\n'
+        str += 'GameDLL = {}'.format(self.FCVAR_GAMEDLL) + '\n'
+        str += 'ClientDLL = {}'.format(self.FCVAR_CLIENTDLL) + '\n'
+        str += 'Hidden = {}'.format(self.FCVAR_HIDDEN) + '\n'
+        str += 'Protected = {}'.format(self.FCVAR_PROTECTED) + '\n'
+        str += 'Sponly = {}'.format(self.FCVAR_SPONLY) + '\n'
+        str += 'Archive = {}'.format(self.FCVAR_ARCHIVE) + '\n'
+        str += 'Notify = {}'.format(self.FCVAR_NOTIFY) + '\n'
+        str += 'UserInfo = {}'.format(self.FCVAR_USERINFO) + '\n'
+        str += 'PrintableOnly = {}'.format(self.FCVAR_PRINTABLEONLY) + '\n'
+        str += 'Unlogged = {}'.format(self.FCVAR_UNLOGGED) + '\n'
+        str += 'NeverAsString = {}'.format(self.FCVAR_NEVERASSTRING) + '\n'
+        str += 'Replicated = {}'.format(self.FCVAR_REPLICATED) + '\n'
+        str += 'Cheat = {}'.format(self.FCVAR_CHEAT) + '\n'
+        str += 'Empty1 = {}'.format(self.FCVAR_EMPTY1) + '\n'
+        str += 'Demo = {}'.format(self.FCVAR_DEMO) + '\n'
+        str += 'DoNotRecord = {}'.format(self.FCVAR_DONOTRECORD) + '\n'
+        str += 'Empty2 = {}'.format(self.FCVAR_EMPTY2) + '\n'
+        str += 'Empty3 = {}'.format(self.FCVAR_EMPTY3) + '\n'
+        str += 'ReloadMaterials = {}'.format(self.FCVAR_RELOADMATERIALS) + '\n'
+        str += 'ReloadTextures = {}'.format(self.FCVAR_RELOADTEXTURES) + '\n'
+        str += 'NotConnected = {}'.format(self.FCVAR_NOTCONNECTED) + '\n'
+        str += 'MaterialSystemThread = {}'.format(self.FCVAR_MATERIALSYSTEMTHREAD) + '\n'
+        str += 'ArchiveBox = {}'.format(self.FCVAR_ARCHIVEXBOX) + '\n'
+        str += 'AccessibleFromThreads = {}'.format(self.FCVAR_ACCESSIBLEFROMTHREADS) + '\n'
+        str += 'Empty4 = {}'.format(self.FCVAR_EMPTY4) + '\n'
+        str += 'Empty5 = {}'.format(self.FCVAR_EMPTY5) + '\n'
+        str += 'ServerCanExecute = {}'.format(self.FCVAR_SERVERCANEXECUTE) + '\n'
+        str += 'ServerCannotQuery = {}'.format(self.FCVAR_SERVERCANNOTQUERY) + '\n'
+        str += 'ClientCommandCanExecute = {}'.format(self.FCVAR_CLIENTCOMMANDCANEXECUTE)
+        return str
+    
+    def compile(self):
+        value = 0
+        value += constant.FCVAR_UNREGISTERED if self.FCVAR_UNREGISTERED else 0
+        value += constant.FCVAR_DEVELOPMENTONLY if self.FCVAR_DEVELOPMENTONLY else 0
+        value += constant.FCVAR_GAMEDLL if self.FCVAR_GAMEDLL else 0
+        value += constant.FCVAR_CLIENTDLL if self.FCVAR_CLIENTDLL else 0
+        value += constant.FCVAR_HIDDEN if self.FCVAR_HIDDEN else 0
+        value += constant.FCVAR_PROTECTED if self.FCVAR_PROTECTED else 0
+        value += constant.FCVAR_SPONLY if self.FCVAR_SPONLY else 0
+        value += constant.FCVAR_ARCHIVE if self.FCVAR_ARCHIVE else 0
+        value += constant.FCVAR_NOTIFY if self.FCVAR_NOTIFY else 0
+        value += constant.FCVAR_USERINFO if self.FCVAR_USERINFO else 0
+        value += constant.FCVAR_PRINTABLEONLY if self.FCVAR_PRINTABLEONLY else 0
+        value += constant.FCVAR_UNLOGGED if self.FCVAR_UNLOGGED else 0
+        value += constant.FCVAR_NEVERASSTRING if self.FCVAR_NEVERASSTRING else 0
+        value += constant.FCVAR_REPLICATED if self.FCVAR_REPLICATED else 0
+        value += constant.FCVAR_CHEAT if self.FCVAR_CHEAT else 0
+        value += constant.FCVAR_EMPTY1 if self.FCVAR_EMPTY1 else 0
+        value += constant.FCVAR_DEMO if self.FCVAR_DEMO else 0
+        value += constant.FCVAR_DONOTRECORD if self.FCVAR_DONOTRECORD else 0
+        value += constant.FCVAR_EMPTY2 if self.FCVAR_EMPTY2 else 0
+        value += constant.FCVAR_EMPTY3 if self.FCVAR_EMPTY3 else 0
+        value += constant.FCVAR_RELOADMATERIALS if self.FCVAR_RELOADMATERIALS else 0
+        value += constant.FCVAR_RELOADTEXTURES if self.FCVAR_RELOADTEXTURES else 0
+        value += constant.FCVAR_NOTCONNECTED if self.FCVAR_NOTCONNECTED else 0
+        value += constant.FCVAR_MATERIALSYSTEMTHREAD if self.FCVAR_MATERIALSYSTEMTHREAD else 0
+        value += constant.FCVAR_ARCHIVEXBOX if self.FCVAR_ARCHIVEXBOX else 0
+        value += constant.FCVAR_ACCESSIBLEFROMTHREADS if self.FCVAR_ACCESSIBLEFROMTHREADS else 0
+        value += constant.FCVAR_EMPTY4 if self.FCVAR_EMPTY4 else 0
+        value += constant.FCVAR_EMPTY5 if self.FCVAR_EMPTY5 else 0
+        value += constant.FCVAR_SERVERCANEXECUTE if self.FCVAR_SERVERCANEXECUTE else 0
+        value += constant.FCVAR_SERVERCANNOTQUERY if self.FCVAR_SERVERCANNOTQUERY else 0
+        value += constant.FCVAR_CLIENTCOMMANDCANEXECUTE if self.FCVAR_CLIENTCOMMANDCANEXECUTE else 0
+        return value
+
 class RayTracing:
     def __init__(self, origin, direction):
         self.origin = origin
