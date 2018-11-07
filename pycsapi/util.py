@@ -26,16 +26,12 @@ def calc_distance(current_x, current_y, new_x, new_y):
         distancex += 360
     elif distancex > 89:
         distancex -= 360
-    if distancex < 0:
-        distancex = -distancex
     distancey = new_y - current_y
     if distancey < -180:
         distancey += 360
     elif distancey > 180:
         distancey -= 360
-    if distancey < 0:
-        distancey = -distancey
-    return distancex, distancey
+    return abs(distancex), abs(distancey)
 
 def check_angles(pitch, yaw):
     if pitch > 89 or pitch < -89 or yaw > 360 or yaw < -360:

@@ -33,7 +33,10 @@ def find_pattern(pid, name, pattern, full_address = False):
     module = get_module_offset(get_module(pid, name))
     if not module or not pattern:
         return False
-    data = read_memory(pid, module, 'b', get_module_size(pid, name))
+    size = get_module_size(pid, name)
+    if not size:
+        size = get_module_size(pid, name, False)
+    data = read_memory(pid, module, 'b', size)
     subindex = __get_subindex(data, pattern)
     return subindex + ((module if full_address else 0) if subindex else 0)
 
@@ -49,8 +52,8 @@ def get_process(name):
         ctypes.windll.kernel32.CloseHandle(hwnd)
     return 0
 
-def get_module(pid, name):
-    hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18, pid)
+def get_module(pid, name, x64 = True):
+    hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18 if x64 else 0x10, pid)
     if hModule:
         module_entry = MODULEENTRY32()
         module_entry.dwSize = ctypes.sizeof(module_entry)
@@ -62,8 +65,8 @@ def get_module(pid, name):
         ctypes.windll.kernel32.CloseHandle(hModule)
     return 0
 
-def get_module_size(pid, name):
-    hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18, pid)
+def get_module_size(pid, name, x64 = True):
+    hModule = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x18 if x64 else 0x10, pid)
     if hModule:
         module_entry = MODULEENTRY32()
         module_entry.dwSize = ctypes.sizeof(module_entry)
@@ -100,7 +103,7 @@ def write_memory(pid, address, data, type, size = None):
         ctypes.windll.kernel32.WriteProcessMemory(process, address, struct.pack(type, data) if type == 'f' or type == 'i' else (bytes([data]) if type == 'b' else chr(data)), (4 if (type == 'i' or type == 'f') else 1), ctypes.byref(ctypes.c_ulong(0)))
     else:
         ctypes.windll.kernel32.WriteProcessMemory(process, address, bytes(data.encode()), size, ctypes.byref(ctypes.c_ulong(0)))
-    ctypes.windll.kernel32.CloseHandle(process)
+    return bool(ctypes.windll.kernel32.CloseHandle(process))
 
 def write_in_thread(pid, address, data, type, size):
     process = ctypes.windll.kernel32.OpenProcess(0x1F0FFF, 0, pid)
