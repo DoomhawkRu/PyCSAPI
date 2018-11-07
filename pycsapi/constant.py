@@ -12,7 +12,7 @@ CLIENT_DLL = 'client_panorama.dll'
 ENGINE_DLL = 'engine.dll'
 VSTDLIB_DLL = 'vstdlib.dll'
 
-PYCSAPI_VERSION = '1.1.4'
+PYCSAPI_VERSION = '1.1.4.1'
 
 PROCESS_NAME = 'csgo.exe'
 PROCESS_TITLE = 'Counter-Strike: Global Offensive'

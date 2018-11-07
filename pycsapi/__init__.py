@@ -25,7 +25,6 @@ except:
 
 def check_for_updates():
     version = urllib.request.urlopen(constant.URL_UPDATE).read().decode()
-    version = '1.0.0'
     if version != constant.PYCSAPI_VERSION and ctypes.windll.user32.MessageBoxW(0, 'A new PyCSAPI version is available: {}\n\nWould you like to install it now?'.format(version), 'PyCSAPI', 0x4 | 0x40):
         if not os.system('pip3 install pycsapi=={}'.format(version)):
             return ctypes.windll.user32.MessageBoxW(0, 'PyCSAPI {} successfully installed'.format(version), 'PyCSAPI', 0x40)
