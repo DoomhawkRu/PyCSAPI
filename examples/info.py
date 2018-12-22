@@ -23,7 +23,6 @@ if __name__ == '__main__':
             print('Player Armor: {}'.format(player.get_armor()))
             print('Player Crosshair Entity: {}'.format(True if player.get_crosshair_entity() else False))
             print('Player Health: {}'.format(player.get_health()))
-            print('Player Name: {}'.format(player.get_name()))
             print('Player Position: {}'.format(player.get_position()))
             print('Player Punch: {}'.format(player.get_punch()))
             print('Player Shots Fired: {}'.format(player.get_shots_fired()))

@@ -23,21 +23,8 @@ except:
     import util
     import win32
 
-def check_for_updates():
-    version = urllib.request.urlopen(constant.URL_UPDATE).read().decode()
-    if version != constant.PYCSAPI_VERSION and ctypes.windll.user32.MessageBoxW(0, 'A new PyCSAPI version is available: {}\n\nWould you like to install it now?'.format(version), 'PyCSAPI', 0x4 | 0x40):
-        if not os.system('pip3 install pycsapi=={}'.format(version)):
-            return ctypes.windll.user32.MessageBoxW(0, 'PyCSAPI {} successfully installed'.format(version), 'PyCSAPI', 0x40)
-        else:
-            return ctypes.windll.user32.MessageBoxW(0, 'Unable to install PyCSAPI {}'.format(version), 'PyCSAPI', 0x10)
-
-def load(show_error = True, check_updates = True):
+def load(show_error = True):
     try:
-        try:
-            if check_updates and check_for_updates():
-                return
-        except:
-            print('[PyCSAPI] Unable to check for updates')
         return PyCSAPI()
     except Exception as e:
         if show_error:
@@ -154,7 +141,7 @@ class PyCSAPI:
             raise Exception({'id': 2, 'message': 'Unable to load required modules!'})
         self.offset = self.load_offsets()
         if not self.offset:
-            raise Exception({'id': 3, 'message': 'Unable to load update offsets!'})
+            raise Exception({'id': 3, 'message': 'Unable to update offsets!'})
         self.dwClientCMD = win32.find_pattern(self.game, constant.ENGINE_DLL, constant.PATTERN_DWCLIENTCMD, True)
         self.convar_manager = ConvarManager(self)
         self.convar_manager.load()
@@ -316,7 +303,8 @@ class Entity:
     def get_id(self):
         return self.id
     
-    def get_name(self):
+    # TODO: FIX
+    '''def get_name(self):
         name = ''
         if not self.player.is_in_game() or not self.is_player():
             return name
@@ -326,7 +314,7 @@ class Entity:
             if character == b'\x00':
                 break
             name += character.decode()
-        return name
+        return name'''
     
     def get_origin(self):
         x, y, z = 0.0, 0.0, 0.0
@@ -402,7 +390,7 @@ class Entity:
         return next_attack <= server_time
     
     def is_alive(self):
-        return self.player.is_in_game() and not win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_lifeState'], 'b')
+        return self.player.is_in_game() and 0 < self.get_health() <= 100
     
     def is_bspotted(self):
         if not self.is_player() or not self.is_alive():
@@ -425,7 +413,7 @@ class Entity:
         return bool(win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bHasHelmet'], 'b'))
     
     def is_player(self):
-        return self.player.is_in_game() and self._get_class_id() == constant.CLASS_CCSPLAYER
+        return self.player.is_in_game() and self.is_alive()
     
     def is_scoped(self):
         if not self.is_player() or not self.is_alive():
@@ -507,8 +495,9 @@ class Player:
     def get_health(self):
         return self.get_entity().get_health()
     
-    def get_name(self):
-        return self.get_entity().get_name()
+    # TODO: FIX
+    '''def get_name(self):
+        return self.get_entity().get_name()'''
     
     def get_position(self):
         return self.get_entity().get_position(None, True)

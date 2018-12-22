@@ -12,12 +12,11 @@ CLIENT_DLL = 'client_panorama.dll'
 ENGINE_DLL = 'engine.dll'
 VSTDLIB_DLL = 'vstdlib.dll'
 
-PYCSAPI_VERSION = '1.1.4.1'
+PYCSAPI_VERSION = '1.1.4.2'
 
 PROCESS_NAME = 'csgo.exe'
 PROCESS_TITLE = 'Counter-Strike: Global Offensive'
 URL_OFFSETS = 'https://raw.githubusercontent.com/frk1/hazedumper/master/csgo.json'
-URL_UPDATE = 'https://raw.githubusercontent.com/DoomhawkRu/PyCSAPI/master/version.txt'
 
 PATTERN_CONVAR = [0xE8, -0x01, -0x01, -0x01, -0x01, 0xB8, -0x01, -0x01, -0x01, -0x01]
 PATTERN_CONVAR_OFFSET = 6

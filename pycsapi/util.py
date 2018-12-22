@@ -338,7 +338,6 @@ class ScreenDrawer:
         update_thread.daemon = True
         update_thread.start()
     
-    # Anyone knows how to avoid flicker?
     def _update(self, hwnd, dc):
         while True:
             ctypes.windll.gdi32.SetBkMode(dc, 0x1)
