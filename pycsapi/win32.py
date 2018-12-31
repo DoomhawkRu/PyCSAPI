@@ -29,7 +29,18 @@ def __get_subindex(list, sub_list):
         index += 1
     return False
 
+def pattern_to_array(pattern):
+    array = []
+    for code in pattern.split(' '):
+        try:
+            array.append(int(code, 16))
+        except:
+            array.append(-1)
+    return array
+
 def find_pattern(pid, name, pattern, full_address = False):
+    if isinstance(pattern, str):
+        pattern = pattern_to_array(pattern)
     module = get_module_offset(get_module(pid, name))
     if not module or not pattern:
         return False

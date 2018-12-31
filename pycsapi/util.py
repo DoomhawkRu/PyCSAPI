@@ -11,7 +11,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 import ctypes
 import ctypes.wintypes
 import math
-import threading
 
 try:
     from pycsapi import constant
@@ -159,8 +158,7 @@ class ConvarFlags:
         self.FCVAR_CLIENTCOMMANDCANEXECUTE = bool(value & constant.FCVAR_CLIENTCOMMANDCANEXECUTE)
     
     def compile_to_str(self):
-        str = ''
-        str += 'Unregistered = {}'.format(self.FCVAR_UNREGISTERED) + '\n'
+        str = 'Unregistered = {}'.format(self.FCVAR_UNREGISTERED) + '\n'
         str += 'DevelopmentOnly = {}'.format(self.FCVAR_DEVELOPMENTONLY) + '\n'
         str += 'GameDLL = {}'.format(self.FCVAR_GAMEDLL) + '\n'
         str += 'ClientDLL = {}'.format(self.FCVAR_CLIENTDLL) + '\n'
@@ -194,8 +192,7 @@ class ConvarFlags:
         return str
     
     def compile(self):
-        value = 0
-        value += constant.FCVAR_UNREGISTERED if self.FCVAR_UNREGISTERED else 0
+        value = constant.FCVAR_UNREGISTERED if self.FCVAR_UNREGISTERED else 0
         value += constant.FCVAR_DEVELOPMENTONLY if self.FCVAR_DEVELOPMENTONLY else 0
         value += constant.FCVAR_GAMEDLL if self.FCVAR_GAMEDLL else 0
         value += constant.FCVAR_CLIENTDLL if self.FCVAR_CLIENTDLL else 0
@@ -233,7 +230,6 @@ class RayTracing:
         self.origin = origin
         self.direction = direction
         self.direction_inverse = ((1 / self.direction[0]) if self.direction[0] != 0 else 0, (1 / self.direction[1]) if self.direction[1] != 0 else 0, (1 / self.direction[2]) if self.direction[2] != 0 else 0)
-    
     
     def trace(self, left_bottom, right_top, distance):
         if self.direction[0] == 0 and (self.origin[0] < min(left_bottom[0], right_top[0]) or self.origin[0] > max(left_bottom[0], right_top[0])):
@@ -324,46 +320,3 @@ class BSPParsing:
                 break
             iStepCount -= 1
         return not (pLeaf.contents & 0x1)
-
-class ScreenDrawer:
-    def __init__(self, title):
-        self.lines = {}
-        self.rectangles = {}
-        self.texts = {}
-        self._clear = False
-        self.SM_CYBORDER = ctypes.windll.user32.GetSystemMetrics(0x6)
-        self.SM_CYCAPTION = ctypes.windll.user32.GetSystemMetrics(0x4)
-        hwnd = ctypes.windll.user32.FindWindowW(None, title)
-        update_thread = threading.Thread(target = self._update, args = (hwnd, ctypes.windll.user32.GetWindowDC(hwnd)))
-        update_thread.daemon = True
-        update_thread.start()
-    
-    def _update(self, hwnd, dc):
-        while True:
-            ctypes.windll.gdi32.SetBkMode(dc, 0x1)
-            for line in self.lines.copy().values():
-                ctypes.windll.gdi32.MoveToEx(dc, line[0] + self.SM_CYBORDER, line[1] + self.SM_CYCAPTION)
-                ctypes.windll.gdi32.LineTo(dc, line[2] + self.SM_CYBORDER, line[3] + self.SM_CYCAPTION)
-            for rectangle in self.rectangles.copy().values():
-                if rectangle[4]:
-                    brush = ctypes.windll.gdi32.CreateSolidBrush(rectangle[4])
-                    ctypes.windll.gdi32.SelectObject(dc, brush)
-                else:
-                    ctypes.windll.gdi32.SelectObject(dc, ctypes.windll.gdi32.GetStockObject(0x5))
-                ctypes.windll.gdi32.Rectangle(dc, rectangle[0] + self.SM_CYBORDER, rectangle[1] + self.SM_CYCAPTION, rectangle[2] + self.SM_CYBORDER, rectangle[3] + self.SM_CYCAPTION)
-                if rectangle[4]:
-                    ctypes.windll.gdi32.DeleteObject(brush)
-            for text in self.texts.copy().values():
-                ctypes.windll.gdi32.SetTextColor(dc, text[3])
-                ctypes.windll.gdi32.ExtTextOut(dc, text[0] + self.SM_CYBORDER, text[1] + self.SM_CYCAPTION, 0x2, (0, 0, 0, 0), text[2])
-    
-    def draw_line(self, id, x1, y1, x2, y2):
-        self.lines[str(id)] = [int(x1), int(y1), int(x2), int(y2)]
-    
-    def draw_rectangle(self, id, x1, y1, x2, y2, color = None):
-        if color and color == (0, 0, 0):
-            color = (1, 1, 1)
-        self.rectangles[str(id)] = [int(x1), int(y1), int(x2), int(y2), None if not color else ctypes.wintypes.RGB(int(color[0]), int(color[1]), int(color[2]))]
-    
-    def draw_text(self, id, x, y, text, color = (255, 255, 255)):
-        self.texts[str(id)] = [int(x), int(y), str(text), ctypes.wintypes.RGB(int(color[0]), int(color[1]), int(color[2]))]

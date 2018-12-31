@@ -12,15 +12,15 @@ CLIENT_DLL = 'client_panorama.dll'
 ENGINE_DLL = 'engine.dll'
 VSTDLIB_DLL = 'vstdlib.dll'
 
-PYCSAPI_VERSION = '1.1.4.2'
+PYCSAPI_VERSION = '1.1.5'
 
 PROCESS_NAME = 'csgo.exe'
 PROCESS_TITLE = 'Counter-Strike: Global Offensive'
 URL_OFFSETS = 'https://raw.githubusercontent.com/frk1/hazedumper/master/csgo.json'
 
-PATTERN_CONVAR = [0xE8, -0x01, -0x01, -0x01, -0x01, 0xB8, -0x01, -0x01, -0x01, -0x01]
+PATTERN_CONVAR = 'E8 ? ? ? ? B8 ? ? ? ?'
 PATTERN_CONVAR_OFFSET = 6
-PATTERN_DWCLIENTCMD = [0x55, 0x8B, 0xEC, 0x8B, 0x0D, -0x01, -0x01, -0x01, -0x01, 0x81, 0xF9, -0x01, -0x01, -0x01, -0x01, 0x75, 0x0C, 0xA1, -0x01, -0x01, -0x01, -0x01, 0x35, -0x01, -0x01, -0x01, -0x01, 0xEB, 0x05, 0x8B, 0x01, 0xFF, 0x50, 0x34, 0x50, 0xA1]
+PATTERN_DWCLIENTCMD = '55 8B EC 8B 0D ? ? ? ? 81 F9 ? ? ? ? 75 0C A1 ? ? ? ? 35 ? ? ? ? EB 05 8B 01 FF 50 34 50 A1'
 
 FCVAR_UNREGISTERED = 1 << 0 # If this is set, don't add to linked list, etc.
 FCVAR_DEVELOPMENTONLY = 1 << 1 # Hidden in released products. Flag is removed automatically if ALLOW_DEVELOPMENT_CVARS is defined

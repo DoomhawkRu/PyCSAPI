@@ -131,7 +131,7 @@ class PyCSAPI:
     def __init__(self):
         self.game = win32.get_process(constant.PROCESS_NAME)
         if not self.game:
-            raise Exception({'id': 1, 'message': 'Process ' + constant.PROCESS_NAME + ' is not found!'})
+            raise Exception({'id': 1, 'message': 'Process {} is not found!'.format(constant.PROCESS_NAME)})
         self.client = win32.get_module_offset(win32.get_module(self.game, constant.CLIENT_DLL))
         self.engine = win32.get_module_offset(win32.get_module(self.game, constant.ENGINE_DLL))
         if not self.client or not self.engine:
@@ -303,19 +303,6 @@ class Entity:
     def get_id(self):
         return self.id
     
-    # TODO: FIX
-    '''def get_name(self):
-        name = ''
-        if not self.player.is_in_game() or not self.is_player():
-            return name
-        radar_pointer = self._get_radar_pointer()
-        for num in range(constant.NAME_SIZE):
-            character = win32.read_memory(self.game, radar_pointer + (constant.RADAR_SIZE * (self.get_id() + 1) + constant.RADAR_NAME_OFFSET) + num, 'c')
-            if character == b'\x00':
-                break
-            name += character.decode()
-        return name'''
-    
     def get_origin(self):
         x, y, z = 0.0, 0.0, 0.0
         if not self.is_alive():
@@ -325,11 +312,11 @@ class Entity:
         z = win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE * 2, 'f')
         return (x, y, z)
     
-    def get_position(self, bone_id = constant.HITBOX_ID_HEAD, player = False):
+    def get_position(self, bone_id = constant.HITBOX_ID_HEAD):
         x, y, z = 0.0, 0.0, 0.0
         if not self.is_alive():
             return (x, y, z)
-        if player:
+        if self.player.get_entity().get_id() == self.get_id():
             x = win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'], 'f')
             y = win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE, 'f')
             z = win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecOrigin'] + constant.TYPE_FLOAT_SIZE * 2, 'f') + win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_vecViewOffset'] + constant.TYPE_FLOAT_SIZE * 2, 'f')
@@ -413,7 +400,7 @@ class Entity:
         return bool(win32.read_memory(self.game, self._get_offset() + self.offset['netvars']['m_bHasHelmet'], 'b'))
     
     def is_player(self):
-        return self.player.is_in_game() and self.is_alive()
+        return self.player.is_in_game() and self.get_team_id()
     
     def is_scoped(self):
         if not self.is_player() or not self.is_alive():
@@ -495,12 +482,8 @@ class Player:
     def get_health(self):
         return self.get_entity().get_health()
     
-    # TODO: FIX
-    '''def get_name(self):
-        return self.get_entity().get_name()'''
-    
     def get_position(self):
-        return self.get_entity().get_position(None, True)
+        return self.get_entity().get_position()
     
     def get_punch(self):
         return self.get_entity().get_punch()
